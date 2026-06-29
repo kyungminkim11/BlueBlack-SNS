@@ -8,6 +8,14 @@
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
   })[ch]);
 
+  const VERSION_META = [
+    { label: '정석 소개형', note: '제품명과 특징을 균형 있게 전달' },
+    { label: '감성 기록형', note: '제품에 어울리는 장면과 분위기를 중심으로 구성' },
+    { label: '특징 정리형', note: '핵심 정보를 빠르게 읽는 체크형 구성' },
+    { label: '추천 대상형', note: '어떤 고객에게 잘 맞는지 중심으로 설명' },
+    { label: '짧은 피드형', note: '모바일에서 빠르게 읽는 간결한 버전' }
+  ];
+
   function currentProductId() {
     const route = location.hash.replace(/^#\//, '');
     if (!route.startsWith('product/')) return '';
@@ -31,39 +39,30 @@
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(selections)); } catch {}
   }
 
-  function buildVersions(item) {
+  function buildFallbackVersions(item) {
     const notice = ensurePeriod(item.notice);
     const feature = ensurePeriod(item.feature);
     const use = ensurePeriod(item.use);
     const photo = ensurePeriod(item.photo);
-
     return [
-      {
-        label: '정석 소개형',
-        note: '제품명과 특징을 균형 있게 전달',
-        text: `${item.emoji} ${item.name}\n\n${item.intro}\n\n${item.description}\n\n이번 게시물에서는 ${item.photo}으로 제품을 자세히 보여드릴 예정입니다.\n\n${notice}\n\n${item.hashtags}`
-      },
-      {
-        label: '감성 기록형',
-        note: '사용 장면과 분위기를 중심으로 구성',
-        text: `${item.emoji} 책상 위의 작은 도구 하나가 기록의 분위기를 바꿉니다.\n\n${item.intro}\n\n천천히 살펴볼수록 제품의 외관과 쓰임이 자연스럽게 이어집니다. ${item.use}에게 특히 잘 어울리는 선택입니다.\n\n이번에는 ${item.photo}으로 실제 사용하는 순간을 담아보았습니다.\n\n${notice}\n\n${item.hashtags}`
-      },
-      {
-        label: '특징 정리형',
-        note: '핵심 정보를 빠르게 읽는 구성',
-        text: `${item.emoji} ${item.name}, 어떤 제품일까요?\n\n✔ 카테고리: ${item.category}\n✔ 핵심 포인트: ${feature}\n✔ 추천 대상: ${use}\n✔ 사진 구성: ${photo}\n\n${item.description}\n\n${notice}\n\n${item.hashtags}`
-      },
-      {
-        label: '추천 대상형',
-        note: '누구에게 잘 맞는지 중심으로 설명',
-        text: `${item.emoji} 이런 분께 ${item.name}을 소개합니다.\n\n• ${item.use}\n• 제품의 외관과 실제 사용 장면을 함께 확인하고 싶은 분\n• 블루블랙 자사몰에서 새로운 문구를 찾고 있는 분\n\n${item.intro}\n\n${item.description}\n\n게시물에서는 ${item.photo}으로 살펴볼 수 있습니다.\n\n${notice}\n\n${item.hashtags}`
-      },
-      {
-        label: '짧은 피드형',
-        note: '모바일에서 빠르게 읽는 간결한 버전',
-        text: `${item.emoji} ${item.name}\n\n${item.intro}\n${feature}\n\n${item.photo}으로 제품을 만나보세요.\n\n${notice}\n\n${item.hashtags}`
-      }
+      `${item.emoji} ${item.name}\n\n${item.intro}\n\n${item.description}\n\n이번 게시물에서는 ${item.photo}으로 제품을 자세히 보여드릴 예정입니다.\n\n${notice}\n\n${item.hashtags}`,
+      `${item.emoji} 책상 위의 작은 도구 하나가 기록의 분위기를 바꿉니다.\n\n${item.intro}\n\n천천히 살펴볼수록 제품의 외관과 쓰임이 자연스럽게 이어집니다. ${item.use}에게 특히 잘 어울리는 선택입니다.\n\n이번에는 ${item.photo}으로 실제 사용하는 순간을 담아보았습니다.\n\n${notice}\n\n${item.hashtags}`,
+      `${item.emoji} ${item.name}, 어떤 제품일까요?\n\n✔ 카테고리: ${item.category}\n✔ 핵심 포인트: ${feature}\n✔ 추천 대상: ${use}\n✔ 사진 구성: ${photo}\n\n${item.description}\n\n${notice}\n\n${item.hashtags}`,
+      `${item.emoji} 이런 분께 ${item.name}을 소개합니다.\n\n• ${item.use}\n• 제품의 외관과 실제 사용 장면을 함께 확인하고 싶은 분\n• 블루블랙 자사몰에서 새로운 문구를 찾고 있는 분\n\n${item.intro}\n\n${item.description}\n\n게시물에서는 ${item.photo}으로 살펴볼 수 있습니다.\n\n${notice}\n\n${item.hashtags}`,
+      `${item.emoji} ${item.name}\n\n${item.intro}\n${feature}\n\n${item.photo}으로 제품을 만나보세요.\n\n${notice}\n\n${item.hashtags}`
     ];
+  }
+
+  function buildVersions(item, productId) {
+    const explicit = window.BLUEBLACK_COPY_VARIANTS?.[productId];
+    const texts = Array.isArray(explicit) && explicit.length === 5
+      ? explicit
+      : buildFallbackVersions(item);
+
+    return VERSION_META.map((meta, index) => ({
+      ...meta,
+      text: String(texts[index] || '')
+    }));
   }
 
   function introductionMarkup(item) {
@@ -107,7 +106,7 @@
           <button id="copy-selected-version" class="copy-version-button" type="button">선택 원고 복사</button>
         </div>
         <pre id="selected-version-text" class="draft-text copy-version-text">${escapeHTML(selected.text)}</pre>
-        <div class="copy-version-footer"><span>제품별 선택 버전이 이 브라우저에 저장됩니다.</span><strong id="copy-version-count">${selected.text.length.toLocaleString('ko-KR')}자</strong></div>
+        <div class="copy-version-footer"><span>이 제품을 위해 별도로 작성한 5개 원고입니다. 선택 버전은 현재 브라우저에 저장됩니다.</span><strong id="copy-version-count">${selected.text.length.toLocaleString('ko-KR')}자</strong></div>
       </div>`;
 
     body.querySelectorAll('[data-copy-version]').forEach((button) => {
@@ -143,9 +142,9 @@
     const title = section.querySelector('.section-head h3');
     const subtitle = section.querySelector('.section-head span');
     if (title) title.textContent = 'SNS 글 5가지 버전';
-    if (subtitle) subtitle.textContent = '선택 후 바로 복사';
+    if (subtitle) subtitle.textContent = '제품별 개별 작성 · 선택 후 복사';
 
-    const versions = buildVersions(item);
+    const versions = buildVersions(item, productId);
     const saved = readSelection();
     const selectedIndex = Number.isInteger(saved[productId]) ? saved[productId] : 0;
     renderVersion(section, productId, item, versions, selectedIndex);
@@ -153,7 +152,7 @@
     document.querySelectorAll('.metric-chip').forEach((chip) => {
       if (chip.querySelector('span')?.textContent?.trim() === 'DRAFT') {
         const strong = chip.querySelector('strong');
-        if (strong) strong.textContent = '5개 버전 완료';
+        if (strong) strong.textContent = '개별 원고 5개 완료';
       }
     });
   }
