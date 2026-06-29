@@ -2,7 +2,14 @@
   "use strict";
 
   const app = document.getElementById("app");
-  const state = { data: null, failed: 0, lockedUntil: 0, idleTimer: null, currentFilter: "" };
+  const state = {
+    data: null,
+    failed: 0,
+    lockedUntil: 0,
+    idleTimer: null,
+    currentFilter: "",
+    scheduleView: null
+  };
   const IDLE_MS = 20 * 60 * 1000;
   const enc = new TextEncoder();
   const dec = new TextDecoder();
@@ -104,6 +111,7 @@
   function renderLogin(message = "") {
     state.data = null;
     state.currentFilter = "";
+    state.scheduleView = null;
     if (location.hash) history.replaceState(null, "", location.pathname + location.search);
     app.innerHTML = loginMarkup(message);
 
@@ -174,6 +182,13 @@
   function isVerified(product) {
     const text = `${product?.status || ""} ${product?.verification || ""}`;
     return /완료|검증됨|게시 가능|업로드 가능/.test(text) && !/대기|보류|필요|미완료/.test(text);
+  }
+
+  function getStatusTone(product) {
+    if (isVerified(product)) return "verified";
+    const text = `${product?.status || ""} ${product?.verification || ""}`;
+    if (/보류|품절|불가/.test(text)) return "hold";
+    return "pending";
   }
 
   function getWorkspaceStats() {
@@ -265,12 +280,12 @@
       const dayEvents = events.filter((event) => event.date === date);
       const eventButtons = dayEvents.map((event) => {
         const product = state.data.products[event.productId];
-        const tone = isVerified(product) ? "verified" : "pending";
-        return `<button class="event-button ${tone}" data-product="${escapeHTML(event.productId)}" title="${escapeHTML(event.title)}">${escapeHTML(event.title)}</button>`;
+        const tone = getStatusTone(product);
+        return `<button class="event-button ${tone}" data-product="${escapeHTML(event.productId)}" title="${escapeHTML(event.title)}" aria-label="${escapeHTML(`${date} ${event.title}`)}"><span>${escapeHTML(event.title)}</span></button>`;
       }).join("");
       cells.push(`
         <div class="day-cell ${dayEvents.length ? "has-event" : ""} ${date === todayKey ? "is-today" : ""}">
-          <div class="day-number">${day}</div>${eventButtons}
+          <div class="day-number">${day}</div><div class="day-events">${eventButtons}</div>
         </div>`);
     }
     const monthEventCount = events.filter((event) => Number(event.date.slice(5, 7)) === month).length;
@@ -301,22 +316,65 @@
       </div>`;
   }
 
+  function renderNextPost(events) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const next = events
+      .map((event) => ({ ...event, time: new Date(`${event.date}T00:00:00`).getTime() }))
+      .filter((event) => event.time >= today.getTime())
+      .sort((a, b) => a.time - b.time)[0];
+    if (!next) return "";
+    const product = state.data.products[next.productId];
+    const tone = getStatusTone(product);
+    return `
+      <button class="next-post-highlight ${tone}" data-product="${escapeHTML(next.productId)}" type="button">
+        <span class="next-post-label">NEXT POST</span>
+        <span class="next-post-date">${escapeHTML(next.date.slice(5).replace("-", "."))} ${escapeHTML(next.weekday)}</span>
+        <strong>${escapeHTML(next.title)}</strong>
+        <span class="next-post-meta">${escapeHTML(product?.status || "상태 미확인")} <b>상세 보기 →</b></span>
+      </button>`;
+  }
+
   function scheduleRowsHTML(events) {
     if (!events.length) return '<div class="no-results">검색 결과가 없습니다.</div>';
     return events.map((event) => {
       const product = state.data.products[event.productId];
       const status = product?.status || "상태 미확인";
-      return `<article class="schedule-row" data-search-text="${escapeHTML(`${event.title} ${event.type} ${status}`.toLowerCase())}">
-        <div class="schedule-date">${escapeHTML(event.date.slice(5).replace("-", "/"))} <span class="small-muted">${escapeHTML(event.weekday)}</span></div>
-        <div><div class="schedule-title">${escapeHTML(event.title)}</div><div class="schedule-type">${escapeHTML(event.type)}<span class="schedule-status">${escapeHTML(status)}</span></div></div>
-        <button class="open-button" data-product="${escapeHTML(event.productId)}" type="button">상세 보기</button>
+      const tone = getStatusTone(product);
+      return `<article class="schedule-row ${tone}" data-product="${escapeHTML(event.productId)}" tabindex="0" role="button" aria-label="${escapeHTML(`${event.date} ${event.title} 상세 보기`)}">
+        <div class="schedule-date"><strong>${escapeHTML(event.date.slice(8))}</strong><span>${escapeHTML(event.date.slice(5, 7))}월 · ${escapeHTML(event.weekday)}</span></div>
+        <div class="schedule-content"><div class="schedule-title">${escapeHTML(event.title)}</div><div class="schedule-type">${escapeHTML(event.type)}</div><span class="status-pill ${tone}">${escapeHTML(status)}</span></div>
+        <span class="schedule-arrow" aria-hidden="true">→</span>
       </article>`;
     }).join("");
   }
 
   function bindProductButtons(scope) {
-    scope.querySelectorAll("[data-product]").forEach((button) => {
-      button.addEventListener("click", () => routeTo(`product/${encodeURIComponent(button.dataset.product)}`));
+    scope.querySelectorAll("[data-product]").forEach((element) => {
+      const open = () => routeTo(`product/${encodeURIComponent(element.dataset.product)}`);
+      element.addEventListener("click", open);
+      if (element.getAttribute("role") === "button") {
+        element.addEventListener("keydown", (event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            open();
+          }
+        });
+      }
+    });
+  }
+
+  function applyScheduleView(view) {
+    state.scheduleView = view;
+    const calendar = document.getElementById("calendar-view");
+    const list = document.getElementById("list-view");
+    if (!calendar || !list) return;
+    calendar.classList.toggle("is-hidden", view !== "calendar");
+    list.classList.toggle("is-hidden", view !== "list");
+    document.querySelectorAll("[data-view]").forEach((button) => {
+      const active = button.dataset.view === view;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-pressed", String(active));
     });
   }
 
@@ -325,24 +383,42 @@
     const events = state.data.events.filter((event) => !filterMonth || Number(event.date.slice(5, 7)) === filterMonth);
     const months = filterMonth ? [filterMonth] : [7, 8];
     const title = filterMonth ? `2026년 ${filterMonth}월 일정` : "7·8월 SNS 일정";
+    const defaultView = window.matchMedia("(max-width: 820px)").matches ? "list" : "calendar";
+    const selectedView = state.scheduleView || defaultView;
 
     main.innerHTML = `
       <div class="page-head">
-        <div><p class="page-kicker">EDITORIAL CALENDAR</p><h2>${title}</h2><p>날짜 또는 제품명을 선택하면 제품 검수 페이지로 이동합니다.</p></div>
+        <div><p class="page-kicker">EDITORIAL CALENDAR</p><h2>${title}</h2><p>제품을 선택하면 검증 정보와 1차 원고를 확인할 수 있습니다.</p></div>
         <span class="meta-chip">최종 갱신 ${escapeHTML(state.data.meta.updatedAt)}</span>
       </div>
       ${renderStatsCards(events)}
+      ${renderNextPost(events)}
       <div class="notice-banner"><span class="notice-icon">!</span><div>${escapeHTML(state.data.meta.securityNotice)} 제품 정보는 검증 상태를 확인한 뒤 사용하세요.</div></div>
-      <div class="section-title-row"><h3>게시 캘린더</h3><span>제품명을 눌러 상세 정보 확인</span></div>
-      <div class="month-grid">${months.map((month) => buildCalendar(2026, month, state.data.events)).join("")}</div>
-      <div class="schedule-toolbar">
-        <div class="search-wrap"><span class="search-icon">⌕</span><input id="schedule-search" type="search" placeholder="제품명 또는 상태 검색" aria-label="일정 검색"></div>
-        <span id="list-count" class="list-count">${events.length}개 게시물</span>
+      <div class="schedule-viewbar">
+        <div><h3>게시 일정</h3><span>목록은 빠른 확인용, 달력은 날짜 확인용입니다.</span></div>
+        <div class="view-toggle" role="group" aria-label="일정 보기 방식">
+          <button type="button" data-view="list" aria-pressed="false">목록</button>
+          <button type="button" data-view="calendar" aria-pressed="false">달력</button>
+        </div>
       </div>
-      <div id="schedule-list" class="schedule-list">${scheduleRowsHTML(events)}</div>
+      <section id="calendar-view" class="schedule-view calendar-view">
+        <div class="month-grid">${months.map((month) => buildCalendar(2026, month, state.data.events)).join("")}</div>
+      </section>
+      <section id="list-view" class="schedule-view list-view">
+        <div class="schedule-toolbar">
+          <div class="search-wrap"><span class="search-icon">⌕</span><input id="schedule-search" type="search" placeholder="제품명 또는 상태 검색" aria-label="일정 검색"></div>
+          <span id="list-count" class="list-count">${events.length}개 게시물</span>
+        </div>
+        <div id="schedule-list" class="schedule-list">${scheduleRowsHTML(events)}</div>
+      </section>
       <p class="updated-note">암호화된 내부 자료 · 외부 공유 금지</p>`;
 
     bindProductButtons(main);
+    document.querySelectorAll("[data-view]").forEach((button) => {
+      button.addEventListener("click", () => applyScheduleView(button.dataset.view));
+    });
+    applyScheduleView(selectedView);
+
     const search = document.getElementById("schedule-search");
     search.addEventListener("input", () => {
       const query = search.value.trim().toLowerCase();
