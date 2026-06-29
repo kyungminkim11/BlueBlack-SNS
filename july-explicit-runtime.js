@@ -67,14 +67,19 @@
     copyStore[productId] = variants;
     rule.ids.forEach((id) => { copyStore[id] = variants; });
 
-    const section = document.getElementById('selected-version-text')?.closest('.section-card');
-    if (section && section.dataset.copyVariants === productId) {
+    const selectedText = document.getElementById('selected-version-text');
+    const currentText = selectedText?.textContent || '';
+    const alreadyShowingRewrittenCopy = variants.includes(currentText);
+    const section = selectedText?.closest('.section-card');
+
+    if (section && section.dataset.copyVariants === productId && !alreadyShowingRewrittenCopy) {
       section.removeAttribute('data-copy-variants');
-      section.querySelector('.section-body')?.replaceChildren();
+      const body = section.querySelector('.section-body');
+      body?.replaceChildren();
       const legacyDraft = document.createElement('pre');
       legacyDraft.id = 'draft-text';
       legacyDraft.className = 'draft-text';
-      section.querySelector('.section-body')?.appendChild(legacyDraft);
+      body?.appendChild(legacyDraft);
     }
   }
 
