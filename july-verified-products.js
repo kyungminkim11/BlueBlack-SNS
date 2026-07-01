@@ -45,15 +45,38 @@
   }
 
   function sourceMarkup(sources = []) {
-    return sources.map(([name, url, note]) => `
+    return sources.map(([name, url, note, type]) => `
       <a class="july-source-link" href="${escapeHTML(url)}" target="_blank" rel="noopener noreferrer">
-        <span><strong>${escapeHTML(name)}</strong><small>${escapeHTML(note)}</small></span><b aria-hidden="true">↗</b>
+        <span class="july-source-copy">
+          <span class="july-source-name-row">
+            <strong>${escapeHTML(name)}</strong>
+            ${type ? `<em>${escapeHTML(type)}</em>` : ''}
+          </span>
+          <small>${escapeHTML(note)}</small>
+        </span>
+        <b aria-hidden="true">↗</b>
       </a>`).join('');
+  }
+
+  function researchGuideMarkup(guide) {
+    if (!guide || !Array.isArray(guide.checks) || !guide.checks.length) return '';
+    return `
+      <div class="july-research-guide">
+        <div class="july-research-guide-head">
+          <span aria-hidden="true">✓</span>
+          <div>
+            <strong>${escapeHTML(guide.title || '직접 확인할 것')}</strong>
+            ${guide.summary ? `<p>${escapeHTML(guide.summary)}</p>` : ''}
+          </div>
+        </div>
+        <ol>${guide.checks.map((item) => `<li>${escapeHTML(item)}</li>`).join('')}</ol>
+      </div>`;
   }
 
   function cardMarkup(config) {
     const checkedAt = config.checkedAt || '2026.07.01';
     const verificationBadge = config.verificationBadge || '공식·판매 자료 확인';
+    const sourceTitle = config.sourceTitle || '검증 출처';
     return `
       <section id="july-verified-research" class="section-card july-verified-card" data-july-key="${escapeHTML(config.key)}">
         <div class="section-head july-verified-head">
@@ -68,9 +91,10 @@
           <div class="july-fact-grid">
             ${(config.facts || []).map(([label, value]) => `<div class="july-fact-item"><span>${escapeHTML(label)}</span><strong>${escapeHTML(value)}</strong></div>`).join('')}
           </div>
+          ${researchGuideMarkup(config.researchGuide)}
           <div class="july-caution"><span aria-hidden="true">!</span><p><b>게시 전 주의</b>${escapeHTML(config.caution || config.content.notice)}</p></div>
           <div class="july-source-block">
-            <div class="july-source-title"><strong>검증 출처</strong><span>${(config.sources || []).length}개 링크</span></div>
+            <div class="july-source-title"><strong>${escapeHTML(sourceTitle)}</strong><span>${(config.sources || []).length}개 링크</span></div>
             <div class="july-source-list">${sourceMarkup(config.sources)}</div>
           </div>
           <p class="july-checked-at">자료 확인일 ${escapeHTML(checkedAt)} · 판매 옵션과 재고는 게시 직전 다시 확인</p>
