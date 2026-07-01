@@ -149,11 +149,15 @@
     }
   }
 
-  function renderInstagram() {
+  function renderInstagram(force = false) {
     const route = location.hash.replace(/^#\//, '');
     if (route !== 'instagram') return;
     const main = document.getElementById('main-content');
     if (!main) return;
+    if (!force && main.querySelector('.instagram-page')) {
+      setActive(true);
+      return;
+    }
     const posts = readPosts();
     main.innerHTML = pageMarkup(posts);
     setActive(true);
@@ -185,20 +189,20 @@
         addedAt: new Date().toISOString()
       }, ...posts].slice(0, MAX_POSTS);
       writePosts(next);
-      renderInstagram();
+      renderInstagram(true);
     });
 
     document.querySelectorAll('[data-instagram-delete]').forEach((button) => button.addEventListener('click', () => {
       const index = Number(button.dataset.instagramDelete);
       if (!window.confirm('이 최근 게시물을 목록에서 삭제할까요?')) return;
       writePosts(posts.filter((_, itemIndex) => itemIndex !== index));
-      renderInstagram();
+      renderInstagram(true);
     }));
 
     document.getElementById('instagram-clear-all')?.addEventListener('click', () => {
       if (!window.confirm('등록된 최근 Instagram 게시물을 모두 지울까요?')) return;
       writePosts([]);
-      renderInstagram();
+      renderInstagram(true);
     });
   }
 
@@ -225,8 +229,12 @@
   function sync() {
     injectNavigation();
     const route = location.hash.replace(/^#\//, '') || 'schedule';
-    if (route === 'instagram') setTimeout(renderInstagram, 35);
-    else setActive(false);
+    if (route === 'instagram') {
+      if (!document.querySelector('.instagram-page')) setTimeout(() => renderInstagram(false), 35);
+      else setActive(true);
+    } else {
+      setActive(false);
+    }
   }
 
   function scheduleSync() {
