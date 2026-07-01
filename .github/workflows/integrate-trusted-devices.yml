@@ -1,51 +1,10 @@
-name: Integrate trusted devices
+name: Trusted device integration complete
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - .github/workflows/integrate-trusted-devices.yml
-      - trusted-devices.js
-      - trusted-devices.css
-  schedule:
-    - cron: '*/5 * * * *'
   workflow_dispatch:
 
-permissions:
-  contents: write
-
 jobs:
-  patch-index:
+  complete:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Patch index
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          path = Path('index.html')
-          text = path.read_text(encoding='utf-8')
-          text = text.replace("connect-src 'self';", "connect-src 'self' https://jnciddblcndmthmmvqrz.supabase.co;")
-          if 'trusted-devices.css' not in text:
-              text = text.replace(
-                  '<link rel="stylesheet" href="./instagram-feed.css?v=1" />',
-                  '<link rel="stylesheet" href="./instagram-feed.css?v=1" />\n  <link rel="stylesheet" href="./trusted-devices.css?v=1" />'
-              )
-          if 'trusted-devices.js' not in text:
-              text = text.replace(
-                  '<script src="./payload-patch.js?v=1" defer></script>',
-                  '<script src="./payload-patch.js?v=1" defer></script>\n  <script src="./trusted-devices.js?v=1" defer></script>'
-              )
-          text = text.replace('./app.js?v=8', './app.js?v=9')
-          path.write_text(text, encoding='utf-8')
-          PY
-      - name: Commit integration
-        run: |
-          if git diff --quiet; then
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add index.html
-          git commit -m "Enable trusted device login"
-          git push
+      - run: echo "Trusted device integration is already complete."
