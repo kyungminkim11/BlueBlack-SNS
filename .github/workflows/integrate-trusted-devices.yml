@@ -7,6 +7,9 @@ on:
       - .github/workflows/integrate-trusted-devices.yml
       - trusted-devices.js
       - trusted-devices.css
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
 
 permissions:
   contents: write
