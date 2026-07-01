@@ -1,0 +1,96 @@
+.july-research-guide {
+  margin-top: 12px;
+  padding: 16px;
+  border: 1px solid rgba(35, 74, 115, 0.16);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(239, 246, 255, 0.96), rgba(249, 252, 255, 0.96));
+}
+
+.july-research-guide-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+}
+
+.july-research-guide-head > span {
+  display: inline-grid;
+  flex: 0 0 26px;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border-radius: 50%;
+  background: #214e7d;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.july-research-guide-head strong {
+  display: block;
+  color: #183c62;
+  font-size: 14px;
+}
+
+.july-research-guide-head p {
+  margin: 4px 0 0;
+  color: #5e7186;
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.july-research-guide ol {
+  display: grid;
+  gap: 8px;
+  margin: 13px 0 0;
+  padding-left: 21px;
+}
+
+.july-research-guide li {
+  padding-left: 3px;
+  color: #324b63;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.july-source-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.july-source-name-row {
+  display: flex !important;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.july-source-name-row strong {
+  min-width: 0;
+}
+
+.july-source-name-row em {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  min-height: 20px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: rgba(33, 78, 125, 0.09);
+  color: #315f8e;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .july-research-guide {
+    padding: 14px;
+  }
+
+  .july-source-name-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+}
