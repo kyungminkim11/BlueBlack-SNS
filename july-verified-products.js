@@ -52,11 +52,13 @@
   }
 
   function cardMarkup(config) {
+    const checkedAt = config.checkedAt || '2026.07.01';
+    const verificationBadge = config.verificationBadge || '공식·판매 자료 확인';
     return `
       <section id="july-verified-research" class="section-card july-verified-card" data-july-key="${escapeHTML(config.key)}">
         <div class="section-head july-verified-head">
           <div><p class="product-content-kicker">VERIFIED RESEARCH</p><h3>검증된 제품 정보</h3></div>
-          <span class="july-verified-badge">공식 자료 확인</span>
+          <span class="july-verified-badge">${escapeHTML(verificationBadge)}</span>
         </div>
         <div class="section-body">
           <div class="july-research-summary">
@@ -71,7 +73,7 @@
             <div class="july-source-title"><strong>검증 출처</strong><span>${(config.sources || []).length}개 링크</span></div>
             <div class="july-source-list">${sourceMarkup(config.sources)}</div>
           </div>
-          <p class="july-checked-at">자료 확인일 2026.06.29 · 판매 옵션과 재고는 게시 직전 다시 확인</p>
+          <p class="july-checked-at">자료 확인일 ${escapeHTML(checkedAt)} · 판매 옵션과 재고는 게시 직전 다시 확인</p>
         </div>
       </section>`;
   }
