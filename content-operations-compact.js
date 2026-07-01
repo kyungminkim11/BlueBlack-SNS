@@ -84,12 +84,16 @@
 
   function wrapBody(card, head) {
     let body = card.querySelector(':scope > .ops-collapsible-body');
-    if (body) return body;
-    body = document.createElement('div');
-    body.className = 'ops-collapsible-body';
-    const nodes = [...card.childNodes].filter((node) => node !== head);
-    nodes.forEach((node) => body.appendChild(node));
-    card.appendChild(body);
+    if (!body) {
+      body = document.createElement('div');
+      body.className = 'ops-collapsible-body';
+      card.appendChild(body);
+    }
+
+    [...card.childNodes]
+      .filter((node) => node !== head && node !== body)
+      .forEach((node) => body.appendChild(node));
+
     return body;
   }
 
@@ -103,11 +107,21 @@
     }
   }
 
+  function repairCollapsible(card) {
+    const head = card.querySelector(':scope > .ops-card-head');
+    if (!head) return;
+    wrapBody(card, head);
+  }
+
   function makeCollapsible(card) {
-    if (card.dataset.opsCompactReady === 'true') return;
     const head = card.querySelector(':scope > .ops-card-head');
     const title = head?.querySelector('h3')?.textContent?.trim() || '';
     if (!head || !COLLAPSE_TITLES.has(title)) return;
+
+    if (card.dataset.opsCompactReady === 'true') {
+      repairCollapsible(card);
+      return;
+    }
 
     card.dataset.opsCompactReady = 'true';
     card.classList.add('ops-collapsible');
