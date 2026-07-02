@@ -1,0 +1,179 @@
+name: Research Opus 88 Blog Products
+
+on:
+  push:
+    paths:
+      - '.github/workflows/research-opus88-blog-products.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install parsers
+        run: python -m pip install requests beautifulsoup4 lxml
+      - name: Research products
+        run: |
+          python - <<'PY'
+          import json, re, time, requests
+          from bs4 import BeautifulSoup
+          from datetime import datetime, timezone
+          from urllib.parse import quote_plus, urljoin, unquote
+
+          HEADERS = {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126 Safari/537.36',
+              'Accept-Language': 'ko-KR,ko;q=0.9,en;q=0.8'
+          }
+
+          queries = [
+              'Opus 88 Harmony fountain pen official specs',
+              'Opus 88 Jazz fountain pen official specs',
+              'Opus 88 Demo Sapphire fountain pen official specs',
+              'Opus 88 Harmony fountain pen review',
+              'Opus 88 Jazz fountain pen review',
+              'Opus 88 Demo fountain pen review eyedropper shut off valve',
+              '오퍼스88 하모니 만년필',
+              '오퍼스88 재즈 만년필',
+              '오퍼스88 사파이어 데모 만년필'
+          ]
+
+          def clean_text(html):
+              soup = BeautifulSoup(html, 'lxml')
+              for node in soup.select('script,style,noscript,svg,nav,footer'):
+                  node.decompose()
+              return re.sub(r'\n{3,}', '\n\n', '\n'.join(x.strip() for x in soup.get_text('\n').splitlines() if x.strip()))
+
+          def search_ddg(query):
+              url = 'https://html.duckduckgo.com/html/?q=' + quote_plus(query)
+              response = requests.get(url, headers=HEADERS, timeout=30)
+              soup = BeautifulSoup(response.text, 'lxml')
+              out = []
+              for result in soup.select('.result'):
+                  a = result.select_one('.result__a')
+                  if not a: continue
+                  href = a.get('href', '')
+                  if 'uddg=' in href:
+                      m = re.search(r'uddg=([^&]+)', href)
+                      if m: href = unquote(m.group(1))
+                  snippet = result.select_one('.result__snippet')
+                  out.append({
+                      'title': a.get_text(' ', strip=True),
+                      'url': href,
+                      'snippet': snippet.get_text(' ', strip=True) if snippet else ''
+                  })
+              return out[:12]
+
+          searches = {}
+          urls = []
+          for query in queries:
+              try:
+                  results = search_ddg(query)
+              except Exception as error:
+                  results = [{'error': f'{type(error).__name__}: {error}'}]
+              searches[query] = results
+              for row in results:
+                  url = row.get('url', '')
+                  if url.startswith('http') and url not in urls:
+                      urls.append(url)
+              time.sleep(1)
+
+          # Add likely official/retailer/BlueBlack endpoints directly.
+          direct_urls = [
+              'https://www.opus88.com/',
+              'https://opus88.com/',
+              'https://www.opus88.com.tw/',
+              'https://www.joycom.com.tw/',
+              'https://blueblack.co.kr/product/search.html?keyword=%EC%98%A4%ED%8D%BC%EC%8A%A488'
+          ]
+          for url in direct_urls:
+              if url not in urls: urls.append(url)
+
+          # Prioritize relevant domains and product-name hits.
+          def relevance(url):
+              lower = url.lower()
+              score = 0
+              for token in ['opus88', 'opus-88', 'joycom', 'blueblack', 'penchalet', 'goulet', 'jetpens', 'appelboom', 'goldspot', 'cultpens', 'stiloestile', 'reddit', 'fountainpennetwork']:
+                  if token in lower: score += 10
+              for token in ['harmony', 'jazz', 'demo', 'sapphire']:
+                  if token in lower: score += 3
+              return -score
+          urls = sorted(urls, key=relevance)[:70]
+
+          pages = []
+          for url in urls:
+              row = {'url': url}
+              try:
+                  response = requests.get(url, headers=HEADERS, timeout=35, allow_redirects=True)
+                  row['status'] = response.status_code
+                  row['final_url'] = response.url
+                  row['content_type'] = response.headers.get('content-type', '')
+                  row['title'] = BeautifulSoup(response.text, 'lxml').title.get_text(' ', strip=True) if '<html' in response.text.lower() and BeautifulSoup(response.text, 'lxml').title else ''
+                  text = clean_text(response.text)
+                  row['text'] = text[:45000]
+                  row['matches'] = [
+                      line for line in text.split('\n')
+                      if any(term in line.lower() for term in ['harmony','jazz','sapphire','demo','eyedropper','shut-off','shut off','valve','ebonite','jowo','bock','capacity','weight','length','diameter','하모니','재즈','사파이어','데모','아이드로퍼'])
+                  ][:180]
+                  soup = BeautifulSoup(response.text, 'lxml')
+                  row['relevant_links'] = [
+                      {'text': a.get_text(' ', strip=True)[:150], 'url': urljoin(response.url, a.get('href'))}
+                      for a in soup.find_all('a', href=True)
+                      if any(term in (a.get_text(' ', strip=True) + ' ' + a.get('href', '')).lower() for term in ['harmony','jazz','sapphire','demo','opus 88','opus88'])
+                  ][:120]
+                  row['images'] = list(dict.fromkeys([
+                      urljoin(response.url, img.get('data-src') or img.get('data-lazy-src') or img.get('src'))
+                      for img in soup.find_all('img')
+                      if (img.get('data-src') or img.get('data-lazy-src') or img.get('src'))
+                  ]))[:80]
+              except Exception as error:
+                  row['error'] = f'{type(error).__name__}: {error}'
+              pages.append(row)
+              time.sleep(.4)
+
+          # Extract BlueBlack product links and fetch exact pages.
+          blueblack_products = []
+          seen = set()
+          for page in pages:
+              if 'blueblack.co.kr' not in (page.get('final_url') or page.get('url', '')):
+                  continue
+              for link in page.get('relevant_links', []):
+                  href = link.get('url', '')
+                  label = link.get('text', '')
+                  if '/product/' not in href or href in seen:
+                      continue
+                  if not any(term in (label + href).lower() for term in ['오퍼스88','opus88','harmony','jazz','demo','sapphire','하모니','재즈','데모','사파이어']):
+                      continue
+                  seen.add(href)
+                  item = {'name': label, 'url': href}
+                  try:
+                      response = requests.get(href, headers=HEADERS, timeout=35)
+                      soup = BeautifulSoup(response.text, 'lxml')
+                      item['status'] = response.status_code
+                      item['title'] = soup.title.get_text(' ', strip=True) if soup.title else ''
+                      item['text'] = clean_text(response.text)[:45000]
+                      item['options'] = [re.sub(r'\s+', ' ', x.get_text(' ', strip=True)) for x in soup.select('select option, .xans-product-option option, .ec-product-button li') if x.get_text(' ', strip=True)][:150]
+                      item['images'] = list(dict.fromkeys([urljoin(response.url, img.get('data-src') or img.get('data-lazy-src') or img.get('src')) for img in soup.find_all('img') if (img.get('data-src') or img.get('data-lazy-src') or img.get('src'))]))[:100]
+                  except Exception as error:
+                      item['error'] = f'{type(error).__name__}: {error}'
+                  blueblack_products.append(item)
+
+          result = {
+              'checked_at': datetime.now(timezone.utc).isoformat(),
+              'searches': searches,
+              'pages': pages,
+              'blueblack_products': blueblack_products
+          }
+          with open('opus88-blog-research.json', 'w', encoding='utf-8') as f:
+              json.dump(result, f, ensure_ascii=False, indent=2)
+          PY
+      - name: Commit research
+        run: |
+          git config user.name 'blueblack-content-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add opus88-blog-research.json
+          git diff --cached --quiet || git commit -m 'Update Opus 88 blog product research'
+          git push
