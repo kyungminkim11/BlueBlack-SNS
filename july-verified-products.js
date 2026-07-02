@@ -73,6 +73,31 @@
       </div>`;
   }
 
+  function shootingGuideMarkup(guide) {
+    if (!guide || !Array.isArray(guide.shots) || !guide.shots.length) return '';
+    const shots = guide.shots.map((shot, index) => {
+      const no = Array.isArray(shot) ? shot[0] : (shot.no || String(index + 1).padStart(2, '0'));
+      const name = Array.isArray(shot) ? shot[1] : (shot.name || '촬영 컷');
+      const detail = Array.isArray(shot) ? shot[2] : (shot.detail || '');
+      const ratio = Array.isArray(shot) ? '' : (shot.ratio || '');
+      return `
+        <article class="july-shot-item">
+          <span>${escapeHTML(no)}</span>
+          <div><strong>${escapeHTML(name)}</strong>${detail ? `<p>${escapeHTML(detail)}</p>` : ''}</div>
+          ${ratio ? `<em>${escapeHTML(ratio)}</em>` : ''}
+        </article>`;
+    }).join('');
+
+    return `
+      <div class="july-shooting-guide">
+        <div class="july-shooting-head">
+          <div><span>PHOTO GUIDE</span><strong>${escapeHTML(guide.title || '제품 촬영 구도')}</strong></div>
+          ${guide.subtitle ? `<p>${escapeHTML(guide.subtitle)}</p>` : ''}
+        </div>
+        <div class="july-shot-list">${shots}</div>
+      </div>`;
+  }
+
   function cardMarkup(config) {
     const checkedAt = config.checkedAt || '2026.07.01';
     const verificationBadge = config.verificationBadge || '공식·판매 자료 확인';
@@ -92,6 +117,7 @@
             ${(config.facts || []).map(([label, value]) => `<div class="july-fact-item"><span>${escapeHTML(label)}</span><strong>${escapeHTML(value)}</strong></div>`).join('')}
           </div>
           ${researchGuideMarkup(config.researchGuide)}
+          ${shootingGuideMarkup(config.shootingGuide)}
           <div class="july-caution"><span aria-hidden="true">!</span><p><b>게시 전 주의</b>${escapeHTML(config.caution || config.content.notice)}</p></div>
           <div class="july-source-block">
             <div class="july-source-title"><strong>${escapeHTML(sourceTitle)}</strong><span>${(config.sources || []).length}개 링크</span></div>
