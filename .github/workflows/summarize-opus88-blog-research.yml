@@ -1,0 +1,88 @@
+name: Summarize Opus 88 Blog Research
+
+on:
+  push:
+    paths:
+      - '.github/workflows/summarize-opus88-blog-research.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  summarize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build compact summary
+        run: |
+          python - <<'PY'
+          import json,re
+          from pathlib import Path
+
+          def one(pattern,text):
+              m=re.search(pattern,text,re.I|re.S)
+              return re.sub(r'\s+',' ',m.group(1)).strip() if m else ''
+
+          blue=json.loads(Path('blueblack-opus88-products.json').read_text(encoding='utf-8'))
+          research=json.loads(Path('opus88-blog-research.json').read_text(encoding='utf-8'))
+          products=[]
+          for p in blue.get('products',[]):
+              text=p.get('text','')
+              title=p.get('title') or p.get('name')
+              if not any(k in title for k in ['하모니','재즈','데모','사파이어']):
+                  continue
+              selected=[]
+              for opt in p.get('options',[]):
+                  if not opt or '필수' in opt or opt.startswith('---') or 'SHIPPING TO' in opt: continue
+                  if len(opt)>100: continue
+                  if opt not in selected: selected.append(opt)
+              products.append({
+                  'title':title,
+                  'url':p.get('url'),
+                  'price':one(r'판매가\s*([0-9,]+원)',text),
+                  'list_price':one(r'소비자가\s*([0-9,]+원)',text),
+                  'reviews':one(r'리뷰\s*([0-9]+)\s*건',text),
+                  'color_block':one(r'상품 옵션\s*색상\s*(.*?)\s*(?:만년필 펜촉굵기|펜촉|닙|옵션선택)',text),
+                  'nib_block':one(r'(?:만년필 펜촉굵기|펜촉굵기|펜촉|닙)\s*(.*?)\s*옵션선택',text),
+                  'options':selected[:60],
+                  'image_candidates':[u for u in p.get('images',[]) if '/web/product/' in u][:15]
+              })
+
+          sources=[]
+          for page in research.get('pages',[]):
+              title=page.get('title','')
+              url=page.get('final_url') or page.get('url')
+              if not any(k in (title+' '+url).lower() for k in ['harmony','jazz','demo','sapphire']): continue
+              text=page.get('text','')
+              extracts=[]
+              patterns=[
+                  r'(eyedropper-filled.{0,700})',r'(piston operated shut-off valve.{0,700})',
+                  r'(Technical Specs.{0,2500})',r'(Diameter - Body.{0,1800})',
+                  r'(ink capacity.{0,500})',r'(holds? [0-9.]+ ml.{0,500})',
+                  r'(Capped Length.{0,1000})',r'(large postable pen.{0,500})'
+              ]
+              for pat in patterns:
+                  m=re.search(pat,text,re.I|re.S)
+                  if m:
+                      value=re.sub(r'\s+',' ',m.group(1)).strip()
+                      if value not in extracts: extracts.append(value)
+              sources.append({'title':title,'url':url,'extracts':extracts[:8],'matches':page.get('matches',[])[:80]})
+
+          review_results=[]
+          for query,rows in research.get('searches',{}).items():
+              for row in rows:
+                  url=row.get('url','')
+                  if any(d in url for d in ['penaddict.com','reddit.com','fountainpennetwork.com','fprevolutionusa.com','penchalet.com','gouletpens.com','jetpens.com','goldspot.com']):
+                      review_results.append({'query':query,'title':row.get('title'),'url':url,'snippet':row.get('snippet')})
+
+          out={'checked_at':research.get('checked_at'),'blueblack_products':products,'sources':sources,'review_results':review_results}
+          Path('opus88-blog-summary.json').write_text(json.dumps(out,ensure_ascii=False,indent=2),encoding='utf-8')
+          PY
+      - name: Commit summary
+        run: |
+          git config user.name blueblack-content-bot
+          git config user.email actions@users.noreply.github.com
+          git add opus88-blog-summary.json
+          git diff --cached --quiet || git commit -m 'Add compact Opus 88 blog research summary'
+          git push
