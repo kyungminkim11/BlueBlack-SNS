@@ -11,9 +11,14 @@
 
   async function loadPrompt() {
     if (promptText) return promptText;
-    const response = await fetch('./SNS_WRITING_PROMPT.md', { cache: 'no-store' });
-    if (!response.ok) throw new Error('SNS 작성 기준을 불러오지 못했습니다.');
-    promptText = await response.text();
+    const [baseResponse, addendumResponse] = await Promise.all([
+      fetch('./SNS_WRITING_PROMPT.md', { cache: 'no-store' }),
+      fetch('./SNS_WRITING_PROMPT_ADDENDUM.md', { cache: 'no-store' })
+    ]);
+    if (!baseResponse.ok) throw new Error('SNS 작성 기준을 불러오지 못했습니다.');
+    const basePrompt = await baseResponse.text();
+    const addendum = addendumResponse.ok ? await addendumResponse.text() : '';
+    promptText = addendum ? `${basePrompt}\n\n---\n\n${addendum}` : basePrompt;
     window.BLUEBLACK_SNS_WRITING_PROMPT = promptText;
     return promptText;
   }
@@ -33,8 +38,8 @@
         <div><span>본문</span><strong>짧은 문단 4~7개 · 구체적 제품 정보 중심</strong></div>
         <div><span>톤</span><strong>친근한 존댓말 · 밝고 자연스럽게</strong></div>
         <div><span>출력</span><strong>제품별 완성형 원고 5가지 버전</strong></div>
-        <div><span>마무리</span><strong>블블샵 구매 안내 + 공식 계정 + 해시태그</strong></div>
-        <div><span>금지</span><strong>미확인 사실·내부 메모·템플릿 복제 금지</strong></div>
+        <div><span>마무리</span><strong>브랜드 공식 계정 + 해시태그 약 20개</strong></div>
+        <div><span>사진</span><strong>대표·구성·디테일·사용·비교·정보 컷</strong></div>
       </div>`;
   }
 
@@ -68,7 +73,7 @@
           <pre id="sns-guide-prompt" class="guide-prompt-box">불러오는 중...</pre>
           <div class="guide-checklist">
             <strong>업로드 전 핵심 확인</strong>
-            <p>자사몰 등록·재고 · 사진 검수 · 잉크 발색 · 공식 계정 · 관련 없는 제품 노출 · 날짜와 이벤트 조건</p>
+            <p>자사몰 등록·재고 · 사진 6종 구도 · 공식 브랜드 계정 · 해시태그 약 20개 · 날짜와 이벤트 조건</p>
           </div>
         </div>
       </section>`;
