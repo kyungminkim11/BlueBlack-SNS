@@ -1,0 +1,101 @@
+name: Summarize Caran d'Ache 849 Research
+
+on:
+  push:
+    paths:
+      - '.github/workflows/summarize-caran-dache-849.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  summarize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build compact summary
+        run: |
+          python - <<'PY'
+          import json, re
+          from pathlib import Path
+
+          source = Path('caran-dache-849-research.json')
+          data = json.loads(source.read_text(encoding='utf-8'))
+          social = []
+          official_pages = []
+          blueblack_pages = []
+
+          for page in data.get('pages', []):
+              url = page.get('final_url') or page.get('url', '')
+              links = page.get('links', [])
+              for link in links:
+                  target = link.get('url', '')
+                  if 'instagram.com' in target and target not in social:
+                      social.append(target)
+              entry = {
+                  'title': page.get('title', ''),
+                  'url': url,
+                  'status': page.get('status'),
+                  'instagram_links': [l.get('url') for l in links if 'instagram.com' in l.get('url', '')],
+              }
+              text = page.get('text', '')
+              if 'carandache.com' in url:
+                  snippets = []
+                  patterns = [
+                      r'hexagonal.{0,260}', r'Goliath.{0,260}', r'600 A4.{0,180}',
+                      r'Made entirely in Switzerland.{0,220}', r'1969.{0,180}',
+                      r'Length.{0,120}', r'Weight.{0,120}', r'aluminium.{0,180}'
+                  ]
+                  for pattern in patterns:
+                      match = re.search(pattern, text, re.I | re.S)
+                      if match:
+                          snippets.append(re.sub(r'\s+', ' ', match.group(0)).strip())
+                  entry['snippets'] = snippets
+                  official_pages.append(entry)
+              elif 'blueblack.co.kr' in url:
+                  entry['text_matches'] = [
+                      re.sub(r'\s+', ' ', line).strip()
+                      for line in text.split('\n')
+                      if '849' in line or '까렌다쉬' in line or '카렌다쉬' in line
+                  ][:80]
+                  blueblack_pages.append(entry)
+
+          products = []
+          for product in data.get('blueblack_products', []):
+              text = product.get('text', '')
+              compact = re.sub(r'\s+', ' ', text)
+              price_matches = re.findall(r'\d{1,3}(?:,\d{3})+\s*원', compact)
+              color_terms = []
+              for term in ['블랙','화이트','레드','블루','그린','옐로우','오렌지','핑크','실버','골드','메탈','형광','네온','터콰이즈','퍼플','바이올렛']:
+                  if term in compact and term not in color_terms:
+                      color_terms.append(term)
+              products.append({
+                  'name': product.get('name') or product.get('title'),
+                  'title': product.get('title'),
+                  'url': product.get('url'),
+                  'status': product.get('status'),
+                  'context': product.get('context', '')[:1000],
+                  'options': product.get('option_texts', [])[:50],
+                  'prices': list(dict.fromkeys(price_matches))[:20],
+                  'color_terms': color_terms,
+                  'excerpt_849': compact[max(0, compact.find('849')-500):compact.find('849')+3000] if '849' in compact else compact[:2000],
+                  'images': product.get('images', [])[:20]
+              })
+
+          result = {
+              'checked_at': data.get('checked_at'),
+              'official_social_links': social,
+              'official_pages': official_pages,
+              'blueblack_search_pages': blueblack_pages,
+              'blueblack_products': products
+          }
+          Path('caran-dache-849-summary.json').write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding='utf-8')
+          PY
+      - name: Commit summary
+        run: |
+          git config user.name 'blueblack-content-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add caran-dache-849-summary.json
+          git diff --cached --quiet || git commit -m 'Add compact Caran d Ache 849 research summary'
+          git push
