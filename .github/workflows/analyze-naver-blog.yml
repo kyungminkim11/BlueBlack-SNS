@@ -88,23 +88,30 @@ jobs:
               except Exception as error:
                   page_status = f'page_error:{type(error).__name__}'
 
+              effective_text = full_text or rss_text
+              effective_images = image_count_page if page_status == 'mobile_page' else rss_img_count
               posts.append({
                   'title': title,
                   'link': link,
                   'mobile_url': mobile_url,
                   'published': pub_date,
+                  'text_length': len(effective_text),
                   'rss_text_length': len(rss_text),
                   'full_text_length': len(full_text),
                   'image_count_rss': rss_img_count,
                   'image_count_page': image_count_page,
+                  'image_count_effective': effective_images,
+                  'paragraph_count_estimate': paragraph_count_page or len([p for p in rss_text.split('\n') if p.strip()]),
                   'paragraph_count_page': paragraph_count_page,
                   'analysis_source': page_status,
-                  'excerpt': (full_text or rss_text)[:700]
+                  'excerpt': effective_text[:700]
               })
 
           page_lengths = [p['full_text_length'] for p in posts if p['full_text_length']]
           rss_lengths = [p['rss_text_length'] for p in posts]
+          display_lengths = page_lengths if page_lengths else rss_lengths
           page_images = [p['image_count_page'] for p in posts if p['analysis_source'] == 'mobile_page']
+          effective_images = [p['image_count_effective'] for p in posts]
           result = {
               'blog_id': BLOG_ID,
               'blog_url': f'https://blog.naver.com/{BLOG_ID}',
@@ -113,13 +120,16 @@ jobs:
               'count': len(posts),
               'posts': posts,
               'summary': {
+                  'average_text_length': round(sum(display_lengths) / len(display_lengths)) if display_lengths else 0,
+                  'min_text_length': min(display_lengths) if display_lengths else 0,
+                  'max_text_length': max(display_lengths) if display_lengths else 0,
                   'average_full_text_length': round(sum(page_lengths) / len(page_lengths)) if page_lengths else 0,
-                  'min_full_text_length': min(page_lengths) if page_lengths else 0,
-                  'max_full_text_length': max(page_lengths) if page_lengths else 0,
                   'average_rss_text_length': round(sum(rss_lengths) / len(rss_lengths)) if rss_lengths else 0,
                   'average_image_count_page': round(sum(page_images) / len(page_images), 1) if page_images else 0,
+                  'average_image_count_effective': round(sum(effective_images) / len(effective_images), 1) if effective_images else 0,
+                  'average_image_count_rss': round(sum(p['image_count_rss'] for p in posts) / len(posts), 1) if posts else 0,
                   'mobile_pages_analyzed': len(page_images),
-                  'note': '모바일 본문 DOM 기준으로 집계하며 장식용 이미지와 프로필 이미지는 제외함.'
+                  'note': '모바일 본문을 읽을 수 있는 경우 전체 본문과 콘텐츠 이미지를 사용하고, 차단된 글은 RSS 미리보기를 사용함.'
               }
           }
           with open('naver-blog-latest-analysis.json', 'w', encoding='utf-8') as f:
