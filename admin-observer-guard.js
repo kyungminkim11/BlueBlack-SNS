@@ -2,7 +2,7 @@
   'use strict';
 
   const storageKey = 'blueblack-admin-blog-plan-v1';
-  const versionKey = 'blueblack-july-blog-defaults-v1';
+  const versionKey = 'blueblack-july-blog-defaults-v2';
 
   if (localStorage.getItem(versionKey) !== 'done') {
     let data;
@@ -21,7 +21,7 @@
         ...first,
         id: '2026-07-1', cycle: 1, targetWindow: '7월 1~2주차', date: first.date || '',
         title: '오퍼스88 전격 재입고', category: '브랜드·입점 소식', status: '초안 작성',
-        memo: '최신 블로그 6개 말투를 참고한 전체 초안과 사진 15장 구성안을 아래에서 확인. 실제 재입고 모델·펜촉 옵션·재고는 게시 직전 최종 확인.', updatedAt: now
+        memo: '최신 블로그 6개 전체 본문을 분석한 약 2,200자 초안과 사진 22장 구성안을 아래에서 확인. 실제 재입고 모델·펜촉 옵션·재고는 게시 직전 최종 확인.', updatedAt: now
       },
       {
         ...second,
@@ -35,6 +35,15 @@
     localStorage.setItem(storageKey, JSON.stringify(data));
     localStorage.setItem(versionKey, 'done');
   }
+
+  window.addEventListener('DOMContentLoaded', () => {
+    if (document.querySelector('script[data-july-blog-enhanced]')) return;
+    const script = document.createElement('script');
+    script.src = './july-blog-enhanced.js?v=1';
+    script.dataset.julyBlogEnhanced = 'true';
+    script.async = true;
+    document.head.appendChild(script);
+  }, { once: true });
 
   const NativeObserver = window.MutationObserver;
   let restored = false;
