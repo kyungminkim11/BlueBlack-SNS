@@ -31,25 +31,19 @@ jobs:
 
           candidates = [
               'https://www.carandache.com/ch/en/849-ballpoint-s-1116.htm',
-              'https://www.carandache.com/ch/en/849-s-1094.htm',
               'https://www.carandache.com/us/en/849-ballpoint-s-1116.htm',
-              'https://www.carandache.com/us/en/849-s-1094.htm',
-              'https://www.carandache.com/ch/en/instruments-writing/849-ballpoint-pen-black-p-10842.htm',
-              'https://www.carandache.com/ch/en/instruments-writing/849-ballpoint-pen-white-p-10843.htm',
-              'https://www.carandache.com/ch/en/ballpoint-refills/goliath-ballpoint-refill-black-medium-p-11115.htm',
-              'https://www.carandache.com/ch/en/la-maison/history-s-1097.htm'
+              'https://www.carandache.com/ch/en/849-ballpoint-pen-s-1116.htm',
+              'https://www.carandache.com/ch/en/'
           ]
-
           blueblack_candidates = [
-              'https://blueblack.co.kr/product/search.html?keyword=849',
-              'https://blueblack.co.kr/product/list.html?cate_no=58',
-              'https://blueblack.co.kr/category/%EA%B9%8C%EB%A0%8C%EB%8B%A4%EC%89%AC/58/'
+              'https://blueblack.co.kr/product/search.html?keyword=849'
           ]
 
           def clean_text(soup):
-              for node in soup.select('script,style,noscript,svg'):
+              clone = BeautifulSoup(str(soup), 'lxml')
+              for node in clone.select('script,style,noscript,svg'):
                   node.decompose()
-              return re.sub(r'\n{3,}', '\n\n', '\n'.join(x.strip() for x in soup.get_text('\n').splitlines() if x.strip()))
+              return re.sub(r'\n{3,}', '\n\n', '\n'.join(x.strip() for x in clone.get_text('\n').splitlines() if x.strip()))
 
           pages = []
           for url in candidates + blueblack_candidates:
@@ -60,28 +54,30 @@ jobs:
                   item['final_url'] = response.url
                   item['content_type'] = response.headers.get('content-type', '')
                   item['length'] = len(response.text)
+                  item['raw_instagram_urls'] = sorted(set(
+                      re.findall(r'https?://(?:www\.)?instagram\.com/[A-Za-z0-9._/-]+', response.text, flags=re.I)
+                  ))
                   soup = BeautifulSoup(response.text, 'lxml')
                   item['title'] = soup.title.get_text(' ', strip=True) if soup.title else ''
-                  item['text'] = clean_text(soup)[:30000]
+                  item['text'] = clean_text(soup)[:40000]
                   item['links'] = [
                       {'text': a.get_text(' ', strip=True)[:120], 'url': urljoin(response.url, a.get('href'))}
                       for a in soup.find_all('a', href=True)
                       if any(k in (a.get_text(' ', strip=True) + ' ' + a.get('href', '')).lower() for k in ['849','goliath','instagram','caran'])
-                  ][:100]
+                  ][:150]
                   item['images'] = [
                       urljoin(response.url, img.get('data-src') or img.get('data-lazy-src') or img.get('src'))
                       for img in soup.find_all('img')
                       if (img.get('data-src') or img.get('data-lazy-src') or img.get('src'))
-                  ][:100]
+                  ][:120]
               except Exception as error:
                   item['error'] = f'{type(error).__name__}: {error}'
               pages.append(item)
 
-          # Parse likely BlueBlack product cards and 849 product links.
           products = []
           seen = set()
           for page in pages:
-              if 'blueblack.co.kr' not in page.get('final_url', page.get('url', '')) or not page.get('text'):
+              if 'blueblack.co.kr' not in page.get('final_url', page.get('url', '')):
                   continue
               try:
                   response = requests.get(page['final_url'], headers=headers, timeout=35)
@@ -89,21 +85,13 @@ jobs:
                   for a in soup.find_all('a', href=True):
                       text = a.get_text(' ', strip=True)
                       href = urljoin(response.url, a['href'])
-                      hay = f'{text} {href}'.lower()
-                      if '849' not in hay:
-                          continue
-                      if href in seen:
+                      if '849' not in f'{text} {href}'.lower() or href in seen:
                           continue
                       seen.add(href)
-                      parent = a
-                      for _ in range(5):
-                          if parent.parent: parent = parent.parent
-                      block = re.sub(r'\s+', ' ', parent.get_text(' ', strip=True))[:1200]
-                      products.append({'name': text[:300], 'url': href, 'context': block})
+                      products.append({'name': text[:300], 'url': href})
               except Exception:
                   pass
 
-          # Fetch each discovered product page for options and details.
           product_pages = []
           for product in products[:30]:
               entry = dict(product)
@@ -112,17 +100,17 @@ jobs:
                   soup = BeautifulSoup(response.text, 'lxml')
                   entry['status'] = response.status_code
                   entry['title'] = soup.title.get_text(' ', strip=True) if soup.title else ''
-                  entry['text'] = clean_text(soup)[:30000]
+                  entry['text'] = clean_text(soup)[:40000]
                   entry['option_texts'] = [
                       re.sub(r'\s+', ' ', opt.get_text(' ', strip=True))
                       for opt in soup.select('select option, .xans-product-option option, .ec-product-button li, .xans-product-option li')
                       if opt.get_text(' ', strip=True)
-                  ][:100]
+                  ][:150]
                   entry['images'] = list(dict.fromkeys([
                       urljoin(response.url, img.get('data-src') or img.get('data-lazy-src') or img.get('src'))
                       for img in soup.find_all('img')
                       if (img.get('data-src') or img.get('data-lazy-src') or img.get('src'))
-                  ]))[:80]
+                  ]))[:100]
               except Exception as error:
                   entry['error'] = f'{type(error).__name__}: {error}'
               product_pages.append(entry)
