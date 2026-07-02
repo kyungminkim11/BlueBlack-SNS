@@ -10,6 +10,13 @@
   item.officialAccountRequired = true;
   item.officialAccountStatus = 'PILOT 브랜드 공식 인스타그램 계정 확인 필요';
 
+  const existingLabels = new Set((item.facts || []).map(([label]) => label));
+  const checks = [
+    ['해시태그 기준', '관련 태그 20개'],
+    ['브랜드 공식 계정', '게시 전 PILOT 공식 인스타그램 계정 확인 필수']
+  ];
+  item.facts = [...(item.facts || []), ...checks.filter(([label]) => !existingLabels.has(label))];
+
   if (Array.isArray(item.variants)) {
     item.variants = item.variants.map((draft) => {
       const body = String(draft || '')
