@@ -3,6 +3,7 @@
 
   const storageKey = 'blueblack-admin-blog-plan-v1';
   const versionKey = 'blueblack-july-blog-defaults-v2';
+  const legacyMigrationKey = 'blueblack-july-blog-plan-v2';
 
   if (localStorage.getItem(versionKey) !== 'done') {
     let data;
@@ -34,6 +35,7 @@
     data.updatedAt = now;
     localStorage.setItem(storageKey, JSON.stringify(data));
     localStorage.setItem(versionKey, 'done');
+    localStorage.setItem(legacyMigrationKey, 'done');
   }
 
   window.addEventListener('DOMContentLoaded', () => {
