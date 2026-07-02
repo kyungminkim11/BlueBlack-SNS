@@ -1,0 +1,81 @@
+name: Analyze Naver Blog
+
+on:
+  push:
+    paths:
+      - '.github/workflows/analyze-naver-blog.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch and analyze latest six posts
+        run: |
+          python - <<'PY'
+          import json, re, urllib.request, xml.etree.ElementTree as ET
+          from html import unescape
+          from datetime import datetime, timezone
+
+          BLOG_ID = 'paikorea'
+          RSS_URL = f'https://rss.blog.naver.com/{BLOG_ID}.xml'
+          headers = {'User-Agent': 'Mozilla/5.0'}
+          req = urllib.request.Request(RSS_URL, headers=headers)
+          with urllib.request.urlopen(req, timeout=30) as response:
+              raw = response.read()
+
+          root = ET.fromstring(raw)
+          items = root.findall('./channel/item')[:6]
+          posts = []
+          for item in items:
+              title = (item.findtext('title') or '').strip()
+              link = (item.findtext('link') or '').strip()
+              pub_date = (item.findtext('pubDate') or '').strip()
+              description = item.findtext('description') or ''
+              img_count = len(re.findall(r'<img\b', description, flags=re.I))
+              text = re.sub(r'<br\s*/?>', '\n', description, flags=re.I)
+              text = re.sub(r'<[^>]+>', ' ', text)
+              text = unescape(text)
+              text = re.sub(r'[ \t\r\f\v]+', ' ', text)
+              text = re.sub(r'\n\s*\n+', '\n', text).strip()
+              posts.append({
+                  'title': title,
+                  'link': link,
+                  'published': pub_date,
+                  'text_length': len(text),
+                  'image_count_rss': img_count,
+                  'paragraph_count_estimate': len([p for p in text.split('\n') if p.strip()]),
+                  'excerpt': text[:500]
+              })
+
+          lengths = [p['text_length'] for p in posts]
+          images = [p['image_count_rss'] for p in posts]
+          result = {
+              'blog_id': BLOG_ID,
+              'blog_url': f'https://blog.naver.com/{BLOG_ID}',
+              'rss_url': RSS_URL,
+              'checked_at': datetime.now(timezone.utc).isoformat(),
+              'count': len(posts),
+              'posts': posts,
+              'summary': {
+                  'average_text_length': round(sum(lengths) / len(lengths)) if lengths else 0,
+                  'min_text_length': min(lengths) if lengths else 0,
+                  'max_text_length': max(lengths) if lengths else 0,
+                  'average_image_count_rss': round(sum(images) / len(images), 1) if images else 0,
+                  'note': 'RSS description 기준. 네이버 에디터의 실제 전체 이미지 수와 다를 수 있음.'
+              }
+          }
+          with open('naver-blog-latest-analysis.json', 'w', encoding='utf-8') as f:
+              json.dump(result, f, ensure_ascii=False, indent=2)
+          PY
+      - name: Commit analysis
+        run: |
+          git config user.name 'blueblack-content-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add naver-blog-latest-analysis.json
+          git diff --cached --quiet || git commit -m 'Update latest Naver blog analysis'
+          git push
