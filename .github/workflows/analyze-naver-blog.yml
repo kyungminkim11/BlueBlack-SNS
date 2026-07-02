@@ -14,46 +14,97 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Install parser
+        run: python -m pip install beautifulsoup4
       - name: Fetch and analyze latest six posts
         run: |
           python - <<'PY'
           import json, re, urllib.request, xml.etree.ElementTree as ET
           from html import unescape
           from datetime import datetime, timezone
+          from bs4 import BeautifulSoup
 
           BLOG_ID = 'paikorea'
           RSS_URL = f'https://rss.blog.naver.com/{BLOG_ID}.xml'
-          headers = {'User-Agent': 'Mozilla/5.0'}
-          req = urllib.request.Request(RSS_URL, headers=headers)
-          with urllib.request.urlopen(req, timeout=30) as response:
-              raw = response.read()
+          headers = {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126 Safari/537.36',
+              'Accept-Language': 'ko-KR,ko;q=0.9,en;q=0.8'
+          }
 
-          root = ET.fromstring(raw)
+          def fetch(url):
+              req = urllib.request.Request(url, headers=headers)
+              with urllib.request.urlopen(req, timeout=30) as response:
+                  return response.read()
+
+          root = ET.fromstring(fetch(RSS_URL))
           items = root.findall('./channel/item')[:6]
           posts = []
+
           for item in items:
               title = (item.findtext('title') or '').strip()
               link = (item.findtext('link') or '').strip()
               pub_date = (item.findtext('pubDate') or '').strip()
               description = item.findtext('description') or ''
-              img_count = len(re.findall(r'<img\b', description, flags=re.I))
-              text = re.sub(r'<br\s*/?>', '\n', description, flags=re.I)
-              text = re.sub(r'<[^>]+>', ' ', text)
-              text = unescape(text)
-              text = re.sub(r'[ \t\r\f\v]+', ' ', text)
-              text = re.sub(r'\n\s*\n+', '\n', text).strip()
+              rss_img_count = len(re.findall(r'<img\b', description, flags=re.I))
+              rss_text = re.sub(r'<br\s*/?>', '\n', description, flags=re.I)
+              rss_text = re.sub(r'<[^>]+>', ' ', rss_text)
+              rss_text = unescape(rss_text)
+              rss_text = re.sub(r'[ \t\r\f\v]+', ' ', rss_text)
+              rss_text = re.sub(r'\n\s*\n+', '\n', rss_text).strip()
+
+              match = re.search(r'/(\d{8,})(?:\?|$)', link)
+              log_no = match.group(1) if match else ''
+              mobile_url = f'https://m.blog.naver.com/PostView.naver?blogId={BLOG_ID}&logNo={log_no}' if log_no else link
+              full_text = ''
+              image_count_page = 0
+              paragraph_count_page = 0
+              page_status = 'rss_only'
+
+              try:
+                  page = fetch(mobile_url)
+                  soup = BeautifulSoup(page, 'html.parser')
+                  container = (
+                      soup.select_one('.se-main-container')
+                      or soup.select_one('#postViewArea')
+                      or soup.select_one('.post_ct')
+                      or soup.select_one('.se_component_wrap')
+                  )
+                  if container:
+                      for node in container.select('script, style, noscript'):
+                          node.decompose()
+                      full_text = '\n'.join(line.strip() for line in container.get_text('\n').splitlines() if line.strip())
+                      full_text = re.sub(r'\n{3,}', '\n\n', full_text).strip()
+                      image_urls = set()
+                      for img in container.find_all('img'):
+                          src = img.get('data-lazy-src') or img.get('data-src') or img.get('src') or ''
+                          if not src or src.startswith('data:'):
+                              continue
+                          if any(token in src.lower() for token in ('profile', 'emoticon', 'icon', 'blank.gif', 'spacer')):
+                              continue
+                          image_urls.add(src.split('?')[0])
+                      image_count_page = len(image_urls)
+                      paragraph_count_page = len([line for line in full_text.split('\n') if line.strip()])
+                      page_status = 'mobile_page'
+              except Exception as error:
+                  page_status = f'page_error:{type(error).__name__}'
+
               posts.append({
                   'title': title,
                   'link': link,
+                  'mobile_url': mobile_url,
                   'published': pub_date,
-                  'text_length': len(text),
-                  'image_count_rss': img_count,
-                  'paragraph_count_estimate': len([p for p in text.split('\n') if p.strip()]),
-                  'excerpt': text[:500]
+                  'rss_text_length': len(rss_text),
+                  'full_text_length': len(full_text),
+                  'image_count_rss': rss_img_count,
+                  'image_count_page': image_count_page,
+                  'paragraph_count_page': paragraph_count_page,
+                  'analysis_source': page_status,
+                  'excerpt': (full_text or rss_text)[:700]
               })
 
-          lengths = [p['text_length'] for p in posts]
-          images = [p['image_count_rss'] for p in posts]
+          page_lengths = [p['full_text_length'] for p in posts if p['full_text_length']]
+          rss_lengths = [p['rss_text_length'] for p in posts]
+          page_images = [p['image_count_page'] for p in posts if p['analysis_source'] == 'mobile_page']
           result = {
               'blog_id': BLOG_ID,
               'blog_url': f'https://blog.naver.com/{BLOG_ID}',
@@ -62,11 +113,13 @@ jobs:
               'count': len(posts),
               'posts': posts,
               'summary': {
-                  'average_text_length': round(sum(lengths) / len(lengths)) if lengths else 0,
-                  'min_text_length': min(lengths) if lengths else 0,
-                  'max_text_length': max(lengths) if lengths else 0,
-                  'average_image_count_rss': round(sum(images) / len(images), 1) if images else 0,
-                  'note': 'RSS description 기준. 네이버 에디터의 실제 전체 이미지 수와 다를 수 있음.'
+                  'average_full_text_length': round(sum(page_lengths) / len(page_lengths)) if page_lengths else 0,
+                  'min_full_text_length': min(page_lengths) if page_lengths else 0,
+                  'max_full_text_length': max(page_lengths) if page_lengths else 0,
+                  'average_rss_text_length': round(sum(rss_lengths) / len(rss_lengths)) if rss_lengths else 0,
+                  'average_image_count_page': round(sum(page_images) / len(page_images), 1) if page_images else 0,
+                  'mobile_pages_analyzed': len(page_images),
+                  'note': '모바일 본문 DOM 기준으로 집계하며 장식용 이미지와 프로필 이미지는 제외함.'
               }
           }
           with open('naver-blog-latest-analysis.json', 'w', encoding='utf-8') as f:
