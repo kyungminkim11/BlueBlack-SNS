@@ -3,6 +3,7 @@
 
   const BLOG_ROUTE = '#/admin';
   const SETTINGS_ROUTE = '#/settings';
+  let scheduled = false;
 
   function makeButton(label, className, targetHash, attrName) {
     const button = document.createElement('button');
@@ -52,7 +53,7 @@
 
     const legacyAdmin = row.querySelector('[data-admin-route="admin"]');
     if (legacyAdmin) {
-      legacyAdmin.textContent = '블로그';
+      if (legacyAdmin.textContent.trim() !== '블로그') legacyAdmin.textContent = '블로그';
       legacyAdmin.classList.add('bb-blog-tab');
     }
 
@@ -64,7 +65,7 @@
 
     const settings = row.querySelector('[data-settings-route]');
     if (settings) {
-      settings.textContent = '관리자';
+      if (settings.textContent.trim() !== '관리자') settings.textContent = '관리자';
       settings.classList.add('bb-admin-tab');
     } else if (!row.querySelector('.bb-admin-tab')) {
       row.appendChild(makeButton('관리자', 'mobile-tab bb-admin-tab', SETTINGS_ROUTE, 'data-settings-hotfix'));
@@ -77,7 +78,9 @@
 
     const legacyAdmin = sidebar.querySelector('[data-admin-route="admin"]');
     if (legacyAdmin) {
-      legacyAdmin.innerHTML = '<span class="nav-dot"></span>블로그';
+      if (legacyAdmin.textContent.trim() !== '블로그') {
+        legacyAdmin.innerHTML = '<span class="nav-dot"></span>블로그';
+      }
       legacyAdmin.classList.add('bb-blog-nav');
     }
 
@@ -89,7 +92,9 @@
 
     const settings = sidebar.querySelector('[data-settings-route]');
     if (settings) {
-      settings.innerHTML = '<span class="nav-dot"></span>관리자';
+      if (settings.textContent.trim() !== '관리자') {
+        settings.innerHTML = '<span class="nav-dot"></span>관리자';
+      }
       settings.classList.add('bb-admin-nav');
     } else if (!sidebar.querySelector('.bb-admin-nav')) {
       const admin = makeButton('관리자', 'nav-button bb-admin-nav', SETTINGS_ROUTE, 'data-settings-hotfix');
@@ -104,7 +109,7 @@
 
     const legacyAdmin = actions.querySelector('[data-admin-route="admin"]');
     if (legacyAdmin) {
-      legacyAdmin.textContent = '블로그';
+      if (legacyAdmin.textContent.trim() !== '블로그') legacyAdmin.textContent = '블로그';
       legacyAdmin.classList.add('bb-blog-top');
     }
 
@@ -115,7 +120,7 @@
 
     const settings = actions.querySelector('[data-settings-route]');
     if (settings) {
-      settings.textContent = '관리자';
+      if (settings.textContent.trim() !== '관리자') settings.textContent = '관리자';
       settings.classList.add('bb-admin-top');
     }
   }
@@ -127,7 +132,25 @@
     ensureTopbar();
   }
 
-  window.addEventListener('DOMContentLoaded', ensureVisible, { once: true });
-  window.addEventListener('hashchange', ensureVisible);
-  setInterval(ensureVisible, 400);
+  function scheduleEnsure() {
+    if (scheduled) return;
+    scheduled = true;
+    requestAnimationFrame(() => {
+      scheduled = false;
+      ensureVisible();
+    });
+  }
+
+  const observeWorkspace = () => {
+    const root = document.getElementById('app') || document.documentElement;
+    new MutationObserver(scheduleEnsure).observe(root, { childList: true, subtree: true });
+    scheduleEnsure();
+  };
+
+  if (document.readyState === 'loading') {
+    window.addEventListener('DOMContentLoaded', observeWorkspace, { once: true });
+  } else {
+    observeWorkspace();
+  }
+  window.addEventListener('hashchange', scheduleEnsure);
 })();
