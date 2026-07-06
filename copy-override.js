@@ -40,4 +40,11 @@
   window.addEventListener('hashchange', scheduleBind);
   window.addEventListener('DOMContentLoaded', scheduleBind, { once: true });
   new MutationObserver(scheduleBind).observe(document.documentElement, { childList: true, subtree: true });
+
+  if (!document.querySelector('script[data-sailor-reference-loader]')) {
+    const referenceScript = document.createElement('script');
+    referenceScript.src = './sailor-july-07-links.js?v=1';
+    referenceScript.dataset.sailorReferenceLoader = 'true';
+    document.head.appendChild(referenceScript);
+  }
 })();
