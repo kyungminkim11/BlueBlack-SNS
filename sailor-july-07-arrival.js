@@ -3,6 +3,8 @@
 
   const PRODUCT_ID = 'sailor-new-arrivals-0707';
   const EVENT_DATE = '2026-07-07';
+  const TITLE = '세일러 신제품 입고 · 프로피트 캐주얼 잉크 증정';
+  const DIRECT_ROUTE_KEY = 'blueblack-sailor-0707-route';
   const hashtags = '#블루블랙펜샵 #세일러 #세일러만년필 #프로기어 #셀레스티얼아웃플로우 #프로피트캐주얼 #만년필신제품 #만년필입고 #쓰리오잉크 #베이직잉크 #만년필잉크 #문구스타그램 #SailorPen #FountainPen';
 
   const variants = [
@@ -89,7 +91,7 @@ ${hashtags}`
   ];
 
   const productContent = {
-    name: '세일러 신제품 입고 · 프로피트 캐주얼 잉크 증정',
+    name: TITLE,
     emoji: '🖋️',
     category: '만년필·입고·이벤트',
     intro: '세일러 신제품 3개 라인업의 입고와 프로피트 캐주얼 구매 사은품을 함께 안내하는 게시물입니다.',
@@ -105,7 +107,7 @@ ${hashtags}`
     date: EVENT_DATE,
     weekday: '화',
     type: '신제품 입고 · 이벤트',
-    title: '세일러 신제품 입고 · 프로피트 캐주얼 잉크 증정',
+    title: TITLE,
     summary: '세일러 프로기어 셀레스티얼 아웃플로우 21K / 14K와 프로피트 캐주얼 라지 투명·베이시스 GT 입고, 프로피트 캐주얼 구매 사은품을 함께 안내합니다.',
     status: '1차안 작성 완료',
     verification: '제품명·행사 조건 확인 완료',
@@ -156,15 +158,18 @@ ${hashtags}`
       '사용자 제공 행사 포스터를 게시 이미지에 함께 첨부',
       '사진 속 제품명과 본문 표기가 정확히 일치하는지 확인'
     ],
-    draft: {
-      state: '1차안 작성 완료 · 최종 검수 전',
-      text: variants[0]
-    }
+    draft: { state: '1차안 작성 완료 · 최종 검수 전', text: variants[0] }
   };
 
-  window.BLUEBLACK_PRODUCT_CONTENT = Object.assign(window.BLUEBLACK_PRODUCT_CONTENT || {}, {
-    [PRODUCT_ID]: productContent
-  });
+  const eventData = {
+    date: EVENT_DATE,
+    weekday: '화',
+    type: '신제품 입고 · 이벤트',
+    title: TITLE,
+    productId: PRODUCT_ID
+  };
+
+  window.BLUEBLACK_PRODUCT_CONTENT = Object.assign(window.BLUEBLACK_PRODUCT_CONTENT || {}, { [PRODUCT_ID]: productContent });
   window.BLUEBLACK_COPY_VARIANTS = window.BLUEBLACK_COPY_VARIANTS || {};
   window.BLUEBLACK_COPY_VARIANTS[PRODUCT_ID] = variants;
   window.BLUEBLACK_DRAFTS = window.BLUEBLACK_DRAFTS || {};
@@ -176,15 +181,7 @@ ${hashtags}`
     try {
       if (data && data.meta && Array.isArray(data.events) && data.products && typeof data.products === 'object') {
         data.products[PRODUCT_ID] = product;
-        if (!data.events.some((event) => event.productId === PRODUCT_ID)) {
-          data.events.push({
-            date: EVENT_DATE,
-            weekday: '화',
-            type: '신제품 입고 · 이벤트',
-            title: product.title,
-            productId: PRODUCT_ID
-          });
-        }
+        if (!data.events.some((event) => event.productId === PRODUCT_ID)) data.events.push(eventData);
         data.events.sort((a, b) => a.date.localeCompare(b.date) || a.title.localeCompare(b.title, 'ko'));
         data.meta.updatedAt = '2026.07.06';
       }
@@ -193,4 +190,134 @@ ${hashtags}`
     }
     return data;
   };
+
+  const escapeHTML = (value = '') => String(value).replace(/[&<>"']/g, (ch) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+  })[ch]);
+
+  if (location.hash === `#/product/${PRODUCT_ID}`) sessionStorage.setItem(DIRECT_ROUTE_KEY, location.hash);
+
+  function openProduct() {
+    location.hash = `#/product/${PRODUCT_ID}`;
+  }
+
+  function addCalendarEntry() {
+    if (document.querySelector(`.calendar-card [data-product="${PRODUCT_ID}"]`)) return;
+    const julyCard = [...document.querySelectorAll('.calendar-card')].find((card) => card.querySelector('.calendar-head h3')?.textContent.includes('2026년 7월'));
+    if (!julyCard) return;
+    const dayCell = [...julyCard.querySelectorAll('.day-cell')].find((cell) => cell.querySelector('.day-number')?.textContent.trim() === '7');
+    const events = dayCell?.querySelector('.day-events');
+    if (!dayCell || !events) return;
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'event-button verified';
+    button.dataset.product = PRODUCT_ID;
+    button.title = TITLE;
+    button.setAttribute('aria-label', `${EVENT_DATE} ${TITLE}`);
+    button.innerHTML = `<span>${escapeHTML(TITLE)}</span>`;
+    button.addEventListener('click', openProduct);
+    events.appendChild(button);
+    dayCell.classList.add('has-event');
+
+    const count = julyCard.querySelector('.calendar-head span');
+    const match = count?.textContent.match(/(\d+)/);
+    if (count && match) count.textContent = `${Number(match[1]) + 1}개 일정`;
+  }
+
+  function addListEntry() {
+    const list = document.getElementById('schedule-list');
+    if (!list || list.querySelector(`[data-product="${PRODUCT_ID}"]`)) return;
+
+    const row = document.createElement('article');
+    row.className = 'schedule-row verified';
+    row.dataset.product = PRODUCT_ID;
+    row.tabIndex = 0;
+    row.setAttribute('role', 'button');
+    row.setAttribute('aria-label', `${EVENT_DATE} ${TITLE} 상세 보기`);
+    row.innerHTML = `
+      <div class="schedule-date"><strong>07</strong><span>07월 · 화</span></div>
+      <div class="schedule-content"><div class="schedule-title">${escapeHTML(TITLE)}</div><div class="schedule-type">신제품 입고 · 이벤트</div><span class="status-pill verified">1차안 작성 완료</span></div>
+      <span class="schedule-arrow" aria-hidden="true">→</span>`;
+    row.addEventListener('click', openProduct);
+    row.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        openProduct();
+      }
+    });
+
+    const rows = [...list.querySelectorAll('.schedule-row')];
+    const lastJuly7 = rows.filter((item) => item.querySelector('.schedule-date strong')?.textContent.trim() === '07' && item.querySelector('.schedule-date span')?.textContent.includes('07월')).at(-1);
+    if (lastJuly7) lastJuly7.insertAdjacentElement('afterend', row);
+    else list.appendChild(row);
+
+    const count = document.getElementById('list-count');
+    const match = count?.textContent.match(/(\d+)/);
+    if (count && match) count.textContent = `${Number(match[1]) + 1}개 게시물`;
+  }
+
+  function renderFallbackDetail() {
+    if (location.hash !== `#/product/${PRODUCT_ID}`) return;
+    const main = document.getElementById('main-content');
+    if (!main) return;
+    const currentTitle = main.querySelector('.detail-hero h2')?.textContent.trim();
+    if (currentTitle === TITLE) return;
+
+    main.innerHTML = `
+      <div class="breadcrumb"><button id="back-sailor-schedule" type="button">일정</button><span>›</span><span>${EVENT_DATE}</span></div>
+      <section class="detail-hero">
+        <div><div class="detail-date">${EVENT_DATE} · 화요일 · 신제품 입고 · 이벤트</div><h2>${escapeHTML(TITLE)}</h2><p>${escapeHTML(product.summary)}</p></div>
+        <span class="status-badge verified">1차안 작성 완료 · 제품명·행사 조건 확인 완료</span>
+      </section>
+      <div class="detail-metrics">
+        <div class="metric-chip"><span>VERIFIED FACTS</span><strong>${product.facts.length}/${product.facts.length}</strong></div>
+        <div class="metric-chip"><span>SOURCES</span><strong>1개</strong></div>
+        <div class="metric-chip"><span>OFFICIAL IMAGES</span><strong>0개</strong></div>
+        <div class="metric-chip"><span>DRAFT</span><strong>1차안 작성 완료</strong></div>
+      </div>
+      <div class="detail-grid">
+        <div class="stack">
+          <section class="section-card"><div class="section-head"><h3>제품 정보</h3><span>확인된 사실만 표시</span></div><div class="section-body"><div class="fact-list">${product.facts.map((fact) => `<div class="fact-row"><div class="fact-label">${escapeHTML(fact.label)}</div><div class="fact-value">${escapeHTML(fact.value)}</div><div class="fact-state">✓</div></div>`).join('')}</div></div></section>
+          <section class="section-card"><div class="section-head"><h3>제품 특징</h3><span>검증 정보 기반</span></div><div class="section-body"><ul class="bullet-list">${product.features.map((item) => `<li>${escapeHTML(item)}</li>`).join('')}</ul></div></section>
+          <section class="section-card"><div class="section-head"><h3>1차 원고</h3><span>전일 검토용</span></div><div class="section-body"><div class="draft-box"><div class="draft-topline"><span class="draft-state">1차안 작성 완료 · 최종 검수 전</span><span class="draft-count">${variants[0].length.toLocaleString('ko-KR')}자</span></div><button class="copy-button" id="copy-sailor-draft" type="button">복사</button><pre class="draft-text">${escapeHTML(variants[0])}</pre></div></div></section>
+        </div>
+        <aside class="stack">
+          <section class="section-card"><div class="section-head"><h3>업로드 전 확인</h3><span>체크리스트</span></div><div class="section-body"><ul class="bullet-list">${product.checklist.map((item) => `<li>${escapeHTML(item)}</li>`).join('')}</ul></div></section>
+        </aside>
+      </div>`;
+
+    document.getElementById('back-sailor-schedule')?.addEventListener('click', () => { location.hash = '#/july'; });
+    document.getElementById('copy-sailor-draft')?.addEventListener('click', async (event) => {
+      try {
+        await navigator.clipboard.writeText(variants[0]);
+        event.currentTarget.textContent = '복사됨';
+      } catch {
+        event.currentTarget.textContent = '복사 실패';
+      }
+    });
+  }
+
+  function restoreDirectRoute() {
+    if (!document.querySelector('.workspace')) return;
+    const route = sessionStorage.getItem(DIRECT_ROUTE_KEY);
+    if (!route) return;
+    sessionStorage.removeItem(DIRECT_ROUTE_KEY);
+    if (location.hash !== route) location.hash = route;
+  }
+
+  let timer = null;
+  function applyFallbacks() {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      restoreDirectRoute();
+      addCalendarEntry();
+      addListEntry();
+      renderFallbackDetail();
+    }, 40);
+  }
+
+  window.addEventListener('DOMContentLoaded', applyFallbacks, { once: true });
+  window.addEventListener('hashchange', applyFallbacks);
+  new MutationObserver(applyFallbacks).observe(document.documentElement, { childList: true, subtree: true });
 })();
