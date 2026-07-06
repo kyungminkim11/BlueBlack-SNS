@@ -27,12 +27,9 @@ ${hashtags}`,
 
 세일러 프로기어 셀레스티얼 아웃플로우 21K / 14K가 입고되었습니다!
 
-이번 입고에서는 21K와 14K 두 가지를 함께 만나보실 수 있어, 원하는 구성을 직접 비교해 보기 좋습니다.
+이번 입고에서는 21K와 14K 두 가지를 함께 만나보실 수 있어 원하는 구성을 직접 비교해 보기 좋습니다.
 
-세일러 프로피트 캐주얼 라지 라인업도 함께 준비했습니다.
-
-💎 프로피트 캐주얼 라지 투명 만년필 GT
-🖋️ 프로피트 캐주얼 라지 베이시스 만년필 GT
+세일러 프로피트 캐주얼 라지 투명 만년필 GT와 베이시스 만년필 GT도 함께 준비했습니다.
 
 프로피트 캐주얼 구매 고객님께는 제품 1개당 쓰리오 베이직 잉크 1병을 증정합니다. 행사는 2026년 9월 30일까지이며, 준비된 증정품이 모두 소진되면 예정보다 일찍 종료될 수 있습니다. 🎁
 
@@ -42,8 +39,6 @@ ${hashtags}`,
 `✨
 
 세일러 신제품 3종이 입고되었습니다!
-
-이번 입고 목록을 한눈에 정리해 드립니다.
 
 ▪ 세일러 프로기어 셀레스티얼 아웃플로우 21K / 14K
 ▪ 세일러 프로피트 캐주얼 라지 투명 만년필 GT
@@ -191,133 +186,17 @@ ${hashtags}`
     return data;
   };
 
-  const escapeHTML = (value = '') => String(value).replace(/[&<>"']/g, (ch) => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
-  })[ch]);
-
-  if (location.hash === `#/product/${PRODUCT_ID}`) sessionStorage.setItem(DIRECT_ROUTE_KEY, location.hash);
-
-  function openProduct() {
-    location.hash = `#/product/${PRODUCT_ID}`;
+  if (location.hash === `#/product/${PRODUCT_ID}`) {
+    sessionStorage.setItem(DIRECT_ROUTE_KEY, location.hash);
   }
 
-  function addCalendarEntry() {
-    if (document.querySelector(`.calendar-card [data-product="${PRODUCT_ID}"]`)) return;
-    const julyCard = [...document.querySelectorAll('.calendar-card')].find((card) => card.querySelector('.calendar-head h3')?.textContent.includes('2026년 7월'));
-    if (!julyCard) return;
-    const dayCell = [...julyCard.querySelectorAll('.day-cell')].find((cell) => cell.querySelector('.day-number')?.textContent.trim() === '7');
-    const events = dayCell?.querySelector('.day-events');
-    if (!dayCell || !events) return;
-
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'event-button verified';
-    button.dataset.product = PRODUCT_ID;
-    button.title = TITLE;
-    button.setAttribute('aria-label', `${EVENT_DATE} ${TITLE}`);
-    button.innerHTML = `<span>${escapeHTML(TITLE)}</span>`;
-    button.addEventListener('click', openProduct);
-    events.appendChild(button);
-    dayCell.classList.add('has-event');
-
-    const count = julyCard.querySelector('.calendar-head span');
-    const match = count?.textContent.match(/(\d+)/);
-    if (count && match) count.textContent = `${Number(match[1]) + 1}개 일정`;
-  }
-
-  function addListEntry() {
-    const list = document.getElementById('schedule-list');
-    if (!list || list.querySelector(`[data-product="${PRODUCT_ID}"]`)) return;
-
-    const row = document.createElement('article');
-    row.className = 'schedule-row verified';
-    row.dataset.product = PRODUCT_ID;
-    row.tabIndex = 0;
-    row.setAttribute('role', 'button');
-    row.setAttribute('aria-label', `${EVENT_DATE} ${TITLE} 상세 보기`);
-    row.innerHTML = `
-      <div class="schedule-date"><strong>07</strong><span>07월 · 화</span></div>
-      <div class="schedule-content"><div class="schedule-title">${escapeHTML(TITLE)}</div><div class="schedule-type">신제품 입고 · 이벤트</div><span class="status-pill verified">1차안 작성 완료</span></div>
-      <span class="schedule-arrow" aria-hidden="true">→</span>`;
-    row.addEventListener('click', openProduct);
-    row.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault();
-        openProduct();
-      }
-    });
-
-    const rows = [...list.querySelectorAll('.schedule-row')];
-    const lastJuly7 = rows.filter((item) => item.querySelector('.schedule-date strong')?.textContent.trim() === '07' && item.querySelector('.schedule-date span')?.textContent.includes('07월')).at(-1);
-    if (lastJuly7) lastJuly7.insertAdjacentElement('afterend', row);
-    else list.appendChild(row);
-
-    const count = document.getElementById('list-count');
-    const match = count?.textContent.match(/(\d+)/);
-    if (count && match) count.textContent = `${Number(match[1]) + 1}개 게시물`;
-  }
-
-  function renderFallbackDetail() {
-    if (location.hash !== `#/product/${PRODUCT_ID}`) return;
-    const main = document.getElementById('main-content');
-    if (!main) return;
-    const currentTitle = main.querySelector('.detail-hero h2')?.textContent.trim();
-    if (currentTitle === TITLE) return;
-
-    main.innerHTML = `
-      <div class="breadcrumb"><button id="back-sailor-schedule" type="button">일정</button><span>›</span><span>${EVENT_DATE}</span></div>
-      <section class="detail-hero">
-        <div><div class="detail-date">${EVENT_DATE} · 화요일 · 신제품 입고 · 이벤트</div><h2>${escapeHTML(TITLE)}</h2><p>${escapeHTML(product.summary)}</p></div>
-        <span class="status-badge verified">1차안 작성 완료 · 제품명·행사 조건 확인 완료</span>
-      </section>
-      <div class="detail-metrics">
-        <div class="metric-chip"><span>VERIFIED FACTS</span><strong>${product.facts.length}/${product.facts.length}</strong></div>
-        <div class="metric-chip"><span>SOURCES</span><strong>1개</strong></div>
-        <div class="metric-chip"><span>OFFICIAL IMAGES</span><strong>0개</strong></div>
-        <div class="metric-chip"><span>DRAFT</span><strong>1차안 작성 완료</strong></div>
-      </div>
-      <div class="detail-grid">
-        <div class="stack">
-          <section class="section-card"><div class="section-head"><h3>제품 정보</h3><span>확인된 사실만 표시</span></div><div class="section-body"><div class="fact-list">${product.facts.map((fact) => `<div class="fact-row"><div class="fact-label">${escapeHTML(fact.label)}</div><div class="fact-value">${escapeHTML(fact.value)}</div><div class="fact-state">✓</div></div>`).join('')}</div></div></section>
-          <section class="section-card"><div class="section-head"><h3>제품 특징</h3><span>검증 정보 기반</span></div><div class="section-body"><ul class="bullet-list">${product.features.map((item) => `<li>${escapeHTML(item)}</li>`).join('')}</ul></div></section>
-          <section class="section-card"><div class="section-head"><h3>1차 원고</h3><span>전일 검토용</span></div><div class="section-body"><div class="draft-box"><div class="draft-topline"><span class="draft-state">1차안 작성 완료 · 최종 검수 전</span><span class="draft-count">${variants[0].length.toLocaleString('ko-KR')}자</span></div><button class="copy-button" id="copy-sailor-draft" type="button">복사</button><pre class="draft-text">${escapeHTML(variants[0])}</pre></div></div></section>
-        </div>
-        <aside class="stack">
-          <section class="section-card"><div class="section-head"><h3>업로드 전 확인</h3><span>체크리스트</span></div><div class="section-body"><ul class="bullet-list">${product.checklist.map((item) => `<li>${escapeHTML(item)}</li>`).join('')}</ul></div></section>
-        </aside>
-      </div>`;
-
-    document.getElementById('back-sailor-schedule')?.addEventListener('click', () => { location.hash = '#/july'; });
-    document.getElementById('copy-sailor-draft')?.addEventListener('click', async (event) => {
-      try {
-        await navigator.clipboard.writeText(variants[0]);
-        event.currentTarget.textContent = '복사됨';
-      } catch {
-        event.currentTarget.textContent = '복사 실패';
-      }
-    });
-  }
-
-  function restoreDirectRoute() {
-    if (!document.querySelector('.workspace')) return;
-    const route = sessionStorage.getItem(DIRECT_ROUTE_KEY);
-    if (!route) return;
+  const restoreTimer = window.setInterval(() => {
+    const savedRoute = sessionStorage.getItem(DIRECT_ROUTE_KEY);
+    if (!savedRoute || !document.querySelector('.workspace')) return;
     sessionStorage.removeItem(DIRECT_ROUTE_KEY);
-    if (location.hash !== route) location.hash = route;
-  }
+    window.clearInterval(restoreTimer);
+    if (location.hash !== savedRoute) location.hash = savedRoute;
+  }, 120);
 
-  let timer = null;
-  function applyFallbacks() {
-    clearTimeout(timer);
-    timer = setTimeout(() => {
-      restoreDirectRoute();
-      addCalendarEntry();
-      addListEntry();
-      renderFallbackDetail();
-    }, 40);
-  }
-
-  window.addEventListener('DOMContentLoaded', applyFallbacks, { once: true });
-  window.addEventListener('hashchange', applyFallbacks);
-  new MutationObserver(applyFallbacks).observe(document.documentElement, { childList: true, subtree: true });
+  window.setTimeout(() => window.clearInterval(restoreTimer), 15000);
 })();
