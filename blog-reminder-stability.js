@@ -1,16 +1,24 @@
 (() => {
   'use strict';
 
-  const nativeRemove = Element.prototype.remove;
+  const scheduleRoutes = new Set(['schedule', 'july', 'august']);
+  const nativeDocumentQuerySelectorAll = Document.prototype.querySelectorAll;
+  const nativeElementRemove = Element.prototype.remove;
 
-  Element.prototype.remove = function stableBlogReminderRemove() {
-    const route = location.hash.replace(/^#\//, '') || 'schedule';
-    const isScheduleRoute = route === 'schedule' || route === 'july' || route === 'august';
+  const currentRoute = () => location.hash.replace(/^#\//, '') || 'schedule';
+  const shouldKeepReminder = () => scheduleRoutes.has(currentRoute());
 
-    if (isScheduleRoute && this.classList?.contains('blog-duty-reminder')) {
+  Document.prototype.querySelectorAll = function stableReminderQuerySelectorAll(selector) {
+    if (selector === '.blog-duty-reminder' && shouldKeepReminder()) {
+      return [];
+    }
+    return nativeDocumentQuerySelectorAll.call(this, selector);
+  };
+
+  Element.prototype.remove = function stableReminderRemove() {
+    if (this.classList?.contains('blog-duty-reminder') && shouldKeepReminder()) {
       return;
     }
-
-    return nativeRemove.call(this);
+    return nativeElementRemove.call(this);
   };
 })();
