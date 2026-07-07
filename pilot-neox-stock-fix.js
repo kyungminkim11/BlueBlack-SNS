@@ -63,13 +63,50 @@
     });
   }
 
-  try {
+  const previousParse = JSON.parse.bind(JSON);
+  const readJSON = (url) => {
     const request = new XMLHttpRequest();
-    request.open('GET', './pilot-capless-pending-verified.js?v=20260707-1', false);
+    request.open('GET', url, false);
     request.send(null);
-    if (request.status === 200 || request.status === 0) {
-      (0, eval)(`${request.responseText}\n//# sourceURL=pilot-capless-pending-verified.js`);
+    if (request.status !== 200 && request.status !== 0) throw new Error(`load_failed:${url}`);
+    return previousParse(request.responseText);
+  };
+
+  try {
+    const core = readJSON('./pilot-capless-core.json?v=20260707-1');
+    const drafts = [
+      ...readJSON('./pilot-capless-drafts-a.json?v=20260707-1'),
+      ...readJSON('./pilot-capless-drafts-b.json?v=20260707-1')
+    ];
+    const ids = [core.productId, ...(core.aliases || [])];
+
+    core.product.draft.text = drafts[0] || '';
+    ids.forEach((id) => {
+      copyStore[id] = drafts;
+      contentStore[id] = core.content;
+    });
+
+    window.BLUEBLACK_DRAFTS = window.BLUEBLACK_DRAFTS || {};
+    ids.forEach((id) => { window.BLUEBLACK_DRAFTS[id] = drafts[0] || ''; });
+
+    window.BLUEBLACK_PENDING_PRODUCTS = window.BLUEBLACK_PENDING_PRODUCTS || [];
+    if (!window.BLUEBLACK_PENDING_PRODUCTS.some((item) => item.productId === core.productId)) {
+      window.BLUEBLACK_PENDING_PRODUCTS.push(core.pending);
     }
+
+    JSON.parse = function pilotCaplessPendingParse(text, reviver) {
+      const data = previousParse(text, reviver);
+      try {
+        if (data && data.meta && Array.isArray(data.events) && data.products) {
+          data.products[core.productId] = core.product;
+          data.events = data.events.filter((event) => !ids.includes(event.productId));
+          data.meta.updatedAt = '2026.07.07';
+        }
+      } catch (error) {
+        console.warn('파이롯트 캡리스 미정 정보를 반영하지 못했습니다.', error);
+      }
+      return data;
+    };
   } catch (error) {
     console.warn('파이롯트 캡리스 미정 자료를 불러오지 못했습니다.', error);
   }
@@ -84,13 +121,13 @@
     }
 
     [
-      ['./pending-schedule.js?v=20260707-1', 'pendingScheduleLoader'],
-      ['./pilot-capless-all-drafts.js?v=20260707-1', 'pilotCaplessDraftLoader']
-    ].forEach(([src, key]) => {
-      if (document.querySelector(`script[data-${key}]`)) return;
+      ['./pending-schedule.js?v=20260707-1', 'pending-schedule-loader'],
+      ['./pilot-capless-all-drafts.js?v=20260707-1', 'pilot-capless-draft-loader']
+    ].forEach(([src, marker]) => {
+      if (document.querySelector(`script[data-loader="${marker}"]`)) return;
       const script = document.createElement('script');
       script.src = src;
-      script.dataset[key] = 'true';
+      script.dataset.loader = marker;
       script.async = true;
       document.head.appendChild(script);
     });
