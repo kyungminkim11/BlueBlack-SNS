@@ -64,4 +64,5 @@
   window.addEventListener('DOMContentLoaded', schedule, { once: true });
   window.addEventListener('hashchange', schedule);
   new MutationObserver(schedule).observe(document.documentElement, { childList: true, subtree: true });
+  schedule();
 })();
