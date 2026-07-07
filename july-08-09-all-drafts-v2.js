@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const targetIds = new Set(['three-o-basic-ink-new-colors-0708', 'monteverde-calibra-4in1']);
+  const targetIds = new Set(['three-o-basic-ink-new-colors-0708', 'monteverde-calibra-4in1', 'sheaffer-vfm', 'sheaffer-vfm-ballpoint']);
   const labels = [
     ['제품 핵심 소개형', '대표 특징과 주요 정보를 균형 있게 전달'],
     ['디자인·색감형', '색과 분위기, 외형을 중심으로 전달'],
