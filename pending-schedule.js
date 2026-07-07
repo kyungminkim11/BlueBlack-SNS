@@ -1,19 +1,28 @@
 (() => {
   'use strict';
 
+  const PILOT_ID = 'pilot-capless-matte-elegance';
   let timer = null;
 
   const escapeHTML = (value = '') => String(value).replace(/[&<>"']/g, (character) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
   })[character]);
 
-  function isScheduleRoute() {
-    const route = location.hash.replace(/^#\//, '') || 'schedule';
-    return route === 'schedule' || route === 'july' || route === 'august';
+  function currentRoute() {
+    return location.hash.replace(/^#\//, '') || 'schedule';
+  }
+
+  function renderPendingDetailHeader(route) {
+    if (route !== `product/${PILOT_ID}`) return;
+    const date = document.querySelector('.detail-date');
+    if (date) date.textContent = '업로드 미정 · 제품 소개';
   }
 
   function render() {
-    if (!isScheduleRoute()) return;
+    const route = currentRoute();
+    renderPendingDetailHeader(route);
+    if (!['schedule', 'july', 'august'].includes(route)) return;
+
     const main = document.getElementById('main-content');
     const anchor = main?.querySelector('.schedule-viewbar');
     if (!main || !anchor) return;
