@@ -1,13 +1,13 @@
 (() => {
   'use strict';
 
-  const targetIds = new Set(['three-o-basic-ink-new-colors-0708', 'monteverde-calibra-4in1', 'sheaffer-vfm', 'sheaffer-vfm-ballpoint']);
+  const targetIds = new Set(['three-o-basic-ink-new-colors-0708', 'monteverde-calibra-4in1', 'sheaffer-vfm', 'sheaffer-vfm-ballpoint', 'pilot-capless-decimo-matt-elegance-0708']);
   const labels = [
-    ['제품 핵심 소개형', '대표 특징과 주요 정보를 균형 있게 전달'],
-    ['디자인·색감형', '색과 분위기, 외형을 중심으로 전달'],
-    ['옵션·구성 정리형', '색상과 구성 정보를 빠르게 확인'],
-    ['사용·추천형', '활용 장면과 추천 대상을 중심으로 전달'],
-    ['짧은 피드형', '핵심만 간결하게 전달']
+    ['신제품 입고 기본형', '입고 소식과 핵심 특징을 균형 있게 전달'],
+    ['신제품 무드형', '신규 입고 분위기와 제품 인상을 중심으로 전달'],
+    ['비교 정리형', '매트·엘레강스의 차이를 빠르게 비교'],
+    ['색상 구성형', '색상과 라인 구성을 중심으로 전달'],
+    ['업무·실사용형', '사용 장면과 추천 대상을 중심으로 전달']
   ];
   let timer = null;
 
@@ -40,6 +40,10 @@
     }
   }
 
+  function signatureOf(variants) {
+    return variants.map((text) => `${text.length}:${text.slice(0, 24)}`).join('|');
+  }
+
   function render() {
     const productId = currentId();
     if (!targetIds.has(productId) || !document.querySelector('.detail-hero')) return;
@@ -48,7 +52,9 @@
     if (!Array.isArray(variants) || variants.length !== 5) return;
 
     const section = findSection();
-    if (!section || section.querySelectorAll('.all-draft-card').length === 5) return;
+    if (!section) return;
+    const signature = signatureOf(variants);
+    if (section.dataset.copyVariants === productId && section.dataset.draftsSignature === signature && section.querySelectorAll('.all-draft-card').length === 5) return;
 
     const title = section.querySelector('.section-head h3');
     const subtitle = section.querySelector('.section-head span');
@@ -58,9 +64,10 @@
     const cards = variants.map((text, index) => {
       const hashtags = (text.match(/#[^\s#]+/g) || []).length;
       const mentions = (text.match(/@[A-Za-z0-9._]+/g) || []).length;
+      const label = labels[index] || [`V${index + 1}`, 'SNS 원고'];
       return `<article class="all-draft-card">
         <div class="all-draft-head">
-          <div class="all-draft-title"><b>V${index + 1}</b><div><strong>${escapeHTML(labels[index][0])}</strong><span>${escapeHTML(labels[index][1])}</span></div></div>
+          <div class="all-draft-title"><b>V${index + 1}</b><div><strong>${escapeHTML(label[0])}</strong><span>${escapeHTML(label[1])}</span></div></div>
           <button class="all-draft-copy" type="button" data-copy-index="${index}">이 원고 복사</button>
         </div>
         <pre class="all-draft-text">${escapeHTML(text)}</pre>
@@ -72,13 +79,14 @@
     if (!body) return;
     body.innerHTML = `<div class="all-drafts-toolbar"><p>V1부터 V5까지 모두 표시됩니다.</p><button class="all-drafts-copy-all" type="button">원고 5개 전체 복사</button></div><div class="all-drafts-grid">${cards}</div>`;
     section.dataset.copyVariants = productId;
+    section.dataset.draftsSignature = signature;
 
     body.querySelectorAll('[data-copy-index]').forEach((button) => {
       button.addEventListener('click', () => copy(button, variants[Number(button.dataset.copyIndex)], '이 원고 복사'));
     });
 
     body.querySelector('.all-drafts-copy-all')?.addEventListener('click', (event) => {
-      const allText = variants.map((text, index) => `V${index + 1} · ${labels[index][0]}\n\n${text}`).join('\n\n━━━━━━━━━━━━━━━━━━━━\n\n');
+      const allText = variants.map((text, index) => `V${index + 1} · ${(labels[index] || [`V${index + 1}`])[0]}\n\n${text}`).join('\n\n━━━━━━━━━━━━━━━━━━━━\n\n');
       copy(event.currentTarget, allText, '원고 5개 전체 복사');
     });
 
