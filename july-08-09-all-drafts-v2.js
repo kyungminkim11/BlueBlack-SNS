@@ -2,13 +2,29 @@
   'use strict';
 
   const targetIds = new Set(['three-o-basic-ink-new-colors-0708', 'monteverde-calibra-4in1', 'sheaffer-vfm', 'sheaffer-vfm-ballpoint', 'pilot-capless-decimo-matt-elegance-0708']);
-  const labels = [
-    ['신제품 입고 기본형', '입고 소식과 핵심 특징을 균형 있게 전달'],
-    ['신제품 무드형', '신규 입고 분위기와 제품 인상을 중심으로 전달'],
-    ['비교 정리형', '매트·엘레강스의 차이를 빠르게 비교'],
-    ['색상 구성형', '색상과 라인 구성을 중심으로 전달'],
-    ['업무·실사용형', '사용 장면과 추천 대상을 중심으로 전달']
+  const defaultLabels = [
+    ['제품 핵심 소개형', '대표 특징과 주요 사양을 균형 있게 전달'],
+    ['디자인·분위기형', '실제 색감, 소재, 구조적 인상을 중심으로 전달'],
+    ['옵션·구성형', '색상, 구성품, 선택 정보를 읽기 쉽게 정리'],
+    ['사용·추천형', '실제 사용 장면과 추천 대상을 중심으로 전달'],
+    ['짧은 피드형', '핵심만 빠르게 읽히는 간결한 게시글']
   ];
+  const labelsByProduct = {
+    'monteverde-calibra-4in1': [
+      ['제품 핵심 소개형', '볼펜·스타일러스·룰러·스탠드 구성을 균형 있게 전달'],
+      ['디자인·분위기형', '블랙·다크 그레이와 데스크 세트 인상을 중심으로 전달'],
+      ['옵션·구성형', '4-in-1 구성과 색상 옵션을 읽기 쉽게 정리'],
+      ['사용·추천형', '업무 책상, 서재, 태블릿 사용 장면을 중심으로 전달'],
+      ['짧은 피드형', '핵심 구성만 빠르게 읽히는 간결한 소개글']
+    ],
+    'pilot-capless-decimo-matt-elegance-0708': [
+      ['신제품 입고 기본형', '입고 소식과 핵심 특징을 균형 있게 전달'],
+      ['신제품 무드형', '신규 입고 분위기와 제품 인상을 중심으로 전달'],
+      ['비교 정리형', '매트·엘레강스의 차이를 빠르게 비교'],
+      ['색상 구성형', '색상과 라인 구성을 중심으로 전달'],
+      ['업무·실사용형', '사용 장면과 추천 대상을 중심으로 전달']
+    ]
+  };
   let timer = null;
 
   const escapeHTML = (value = '') => String(value).replace(/[&<>"']/g, (character) => ({
@@ -44,6 +60,10 @@
     return variants.map((text) => `${text.length}:${text.slice(0, 24)}`).join('|');
   }
 
+  function labelsFor(productId) {
+    return labelsByProduct[productId] || defaultLabels;
+  }
+
   function render() {
     const productId = currentId();
     if (!targetIds.has(productId) || !document.querySelector('.detail-hero')) return;
@@ -51,6 +71,7 @@
     const variants = window.BLUEBLACK_COPY_VARIANTS?.[productId];
     if (!Array.isArray(variants) || variants.length !== 5) return;
 
+    const labels = labelsFor(productId);
     const section = findSection();
     if (!section) return;
     const signature = signatureOf(variants);
