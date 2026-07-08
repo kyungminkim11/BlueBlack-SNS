@@ -102,66 +102,6 @@ ${hashtagSets[4]}`
 
   const allDraftText = variants.map((draft, index) => `[원고 ${String(index + 1).padStart(2, '0')}]\n${draft}`).join('\n\n------------------------------\n\n');
 
-  const finalProduct = {
-    date: EVENT_DATE,
-    weekday: '수',
-    type: '신제품 입고',
-    title: TITLE,
-    summary: '파이롯트 캡리스 데시모 매트와 엘레강스 만년필 신제품 입고 글입니다. 두 제품을 하나의 게시물에서 함께 안내하며, 원고 5개가 모두 표시됩니다.',
-    status: '신제품 입고글 5개 작성 완료',
-    verification: '첨부 상세페이지 기준 · 외부 사양 참고 검토 완료',
-    statusTone: 'verified',
-    officialName: '파이롯트 캡리스 데시모 매트 만년필 / 파이롯트 캡리스 데시모 엘레강스 만년필',
-    englishName: 'Pilot Capless Decimo Matt Fountain Pen / Pilot Capless Decimo Deep Elegance Fountain Pen',
-    facts: [
-      { label: '게시일', value: '2026년 7월 8일 수요일', verified: true },
-      { label: '게시 성격', value: '신제품 입고글', verified: true },
-      { label: '제품 구성', value: '캡리스 데시모 매트 만년필 + 캡리스 데시모 엘레강스 만년필 2종 통합 입고 안내', verified: true },
-      { label: '공통 구조', value: '캡을 분리하지 않고 노크로 닙을 넣고 빼는 캡리스 방식', verified: true },
-      { label: '공통 닙', value: '18K 금촉 표기 확인', verified: true },
-      { label: '충전 방식', value: '파이롯트 카트리지 또는 컨버터 사용 가능 구조로 확인', verified: true },
-      { label: '매트 색상', value: '매트 그레이 · 매트 다크그린 · 매트 메탈 블루 · 매트 브라운 · 매트 바이올렛', verified: true },
-      { label: '엘레강스 색상', value: '딥 블랙 · 다크 블루 · 다크 레드', verified: true },
-      { label: '판매가', value: 'SNS 본문에는 미기재 권장', verified: true },
-      { label: '입고 닙', value: '실제 매장 재고표 기준으로 최종 확인 필요', verified: false }
-    ],
-    features: [
-      '캡을 분리하지 않고 노크로 바로 사용하는 캡리스 구조',
-      '데시모는 일반 캡리스보다 슬림하고 가벼운 라인으로 설명 가능',
-      '18K 금촉과 카트리지·컨버터 호환 구조를 갖춘 실사용형 만년필',
-      '매트 라인은 무광 컬러와 블랙 트림으로 모던하고 차분한 인상',
-      '엘레강스 라인은 딥 컬러와 골드 트림으로 클래식하고 선물용에 가까운 인상'
-    ],
-    pros: [
-      '노크식 구조라 업무 메모나 이동 중 필기 상황에서 사용성이 좋음',
-      '매트와 엘레강스의 무드 차이가 명확해 SNS 사진 구성 포인트가 살아남',
-      '판매가를 넣지 않아 가격 변동이나 채널별 정책 차이에 따른 수정 부담을 줄일 수 있음'
-    ],
-    cons: [
-      '입고 닙과 실제 재고 색상은 매장 재고표 기준으로 최종 확인 필요',
-      '외부 판매처 이미지는 저작권 자유 자료가 아니므로 그대로 업로드하면 안 됨',
-      '캡리스 구조는 클립 위치가 그립감에 영향을 줄 수 있어 실사용 고객에게는 시필 안내가 좋음'
-    ],
-    checklist: [
-      '2제품을 하나의 신제품 입고 게시물로 업로드',
-      '본문 첫 문장부터 신제품 입고로 전달하기',
-      '판매가는 본문에 적지 않기',
-      '입고 닙은 매장 재고표 확인 후 필요 시 본문 하단에만 추가',
-      '색상명은 첨부 상세페이지와 실물 라벨을 최종 대조',
-      '외부 판매처 이미지는 저작권 자유 이미지가 아니므로 업로드 금지',
-      '첨부 상세페이지 또는 공급사 승인 이미지를 우선 사용',
-      '해시태그는 파이롯트·캡리스·데시모·신제품입고 중심으로 구성'
-    ],
-    draft: { state: '신제품 입고글 5개 작성 완료 · 전체 표시', text: allDraftText }
-  };
-
-  const eventData = { date: EVENT_DATE, weekday: '수', type: '신제품 입고', title: TITLE, productId: PRODUCT_ID };
-
-  function isTargetText(text) {
-    const value = String(text || '');
-    return (/캡리스/.test(value) && /데시모/.test(value)) || (/capless/i.test(value) && /decimo/i.test(value));
-  }
-
   function currentProductId() {
     const route = location.hash.replace(/^#\//, '');
     if (!route.startsWith('product/')) return '';
@@ -169,7 +109,18 @@ ${hashtagSets[4]}`
     catch { return route.slice(8); }
   }
 
-  function registerDraft(id) {
+  function heroTitleText() {
+    return document.querySelector('.detail-hero h2')?.textContent || '';
+  }
+
+  function isPilotPage() {
+    const id = currentProductId();
+    if (id === PRODUCT_ID) return true;
+    const title = heroTitleText();
+    return (/캡리스/.test(title) && /데시모/.test(title)) || (/capless/i.test(title) && /decimo/i.test(title));
+  }
+
+  function registerPilotDraft(id = PRODUCT_ID) {
     if (!id) return;
     window.BLUEBLACK_DRAFTS = window.BLUEBLACK_DRAFTS || {};
     window.BLUEBLACK_COPY_VARIANTS = window.BLUEBLACK_COPY_VARIANTS || {};
@@ -177,64 +128,36 @@ ${hashtagSets[4]}`
     window.BLUEBLACK_COPY_VARIANTS[id] = variants;
   }
 
-  function patchData(data) {
-    if (!data || !Array.isArray(data.events) || !data.products || typeof data.products !== 'object') return data;
-    const existingEvent = data.events.find((event) => isTargetText(`${event.title} ${data.products[event.productId]?.title || ''} ${data.products[event.productId]?.officialName || ''} ${data.products[event.productId]?.englishName || ''}`));
-    const existingProduct = Object.entries(data.products).find(([id, product]) => isTargetText(`${id} ${product?.title || ''} ${product?.officialName || ''} ${product?.englishName || ''}`));
-    const targetId = existingEvent?.productId || existingProduct?.[0] || PRODUCT_ID;
-
-    data.products[targetId] = Object.assign({}, data.products[targetId] || {}, finalProduct, { draft: finalProduct.draft });
-    registerDraft(targetId);
-
-    if (existingEvent) {
-      Object.assign(existingEvent, eventData, { productId: targetId });
-    } else if (!data.events.some((event) => event.productId === targetId)) {
-      data.events.push(Object.assign({}, eventData, { productId: targetId }));
-    }
-
-    data.events.sort((a, b) => String(a.date).localeCompare(String(b.date)) || String(a.title).localeCompare(String(b.title), 'ko'));
-    if (data.meta) data.meta.updatedAt = '2026.07.08';
-    return data;
-  }
-
-  const previousParse = JSON.parse.bind(JSON);
-  JSON.parse = function pilotCaplessFinalParse(text, reviver) {
-    const data = previousParse(text, reviver);
-    try { return patchData(data); }
-    catch (error) { console.warn('캡리스 데시모 최종 표시 보정 실패', error); return data; }
-  };
-
-  function replaceText(selector, text) {
-    const el = document.querySelector(selector);
-    if (el) el.textContent = text;
-  }
+  registerPilotDraft(PRODUCT_ID);
 
   function applyDomOverride() {
-    const id = currentProductId();
-    const pageText = document.querySelector('#main-content')?.textContent || '';
-    if (!id && !isTargetText(pageText)) return;
-    if (id) registerDraft(id);
-    if (!isTargetText(`${id} ${pageText}`)) return;
+    if (!isPilotPage()) return;
+    const id = currentProductId() || PRODUCT_ID;
+    registerPilotDraft(id);
 
     const draft = document.getElementById('draft-text');
     if (draft && draft.textContent !== allDraftText) {
       draft.textContent = allDraftText;
-      draft.dataset.overrideId = id || PRODUCT_ID;
+      draft.dataset.overrideId = id;
     }
-    replaceText('.draft-state', '신제품 입고글 5개 작성 완료 · 전체 표시');
-    replaceText('.draft-count', `${allDraftText.length.toLocaleString('ko-KR')}자`);
+
+    const state = document.querySelector('.draft-state');
+    if (state) state.textContent = '신제품 입고글 5개 작성 완료 · 전체 표시';
+
+    const count = document.querySelector('.draft-count');
+    if (count) count.textContent = `${allDraftText.length.toLocaleString('ko-KR')}자`;
 
     const heroTitle = document.querySelector('.detail-hero h2');
-    if (heroTitle && isTargetText(heroTitle.textContent)) heroTitle.textContent = TITLE;
+    if (heroTitle) heroTitle.textContent = TITLE;
 
     const heroSummary = document.querySelector('.detail-hero p');
-    if (heroSummary && isTargetText(pageText)) heroSummary.textContent = finalProduct.summary;
+    if (heroSummary) heroSummary.textContent = '파이롯트 캡리스 데시모 매트와 엘레강스 만년필 신제품 입고 글입니다. 두 제품을 하나의 게시물에서 함께 안내하며, 원고 5개가 모두 표시됩니다.';
 
     const detailDate = document.querySelector('.detail-date');
-    if (detailDate && isTargetText(pageText)) detailDate.textContent = `${EVENT_DATE} · 수요일 · 신제품 입고`;
+    if (detailDate) detailDate.textContent = `${EVENT_DATE} · 수요일 · 신제품 입고`;
 
     const badge = document.querySelector('.status-badge');
-    if (badge && isTargetText(pageText)) badge.textContent = '신제품 입고글 5개 작성 완료 · 첨부 상세페이지 기준 · 외부 사양 참고 검토 완료';
+    if (badge) badge.textContent = '신제품 입고글 5개 작성 완료 · 첨부 상세페이지 기준 · 외부 사양 참고 검토 완료';
 
     document.querySelectorAll('.metric-chip').forEach((chip) => {
       if (chip.querySelector('span')?.textContent?.trim() === 'DRAFT') {
@@ -244,7 +167,6 @@ ${hashtagSets[4]}`
     });
   }
 
-  registerDraft(PRODUCT_ID);
   let timer = null;
   function scheduleOverride() {
     clearTimeout(timer);
