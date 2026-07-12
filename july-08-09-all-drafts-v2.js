@@ -1,7 +1,14 @@
 (() => {
   'use strict';
 
-  const targetIds = new Set(['three-o-basic-ink-new-colors-0708', 'monteverde-calibra-4in1', 'sheaffer-vfm', 'sheaffer-vfm-ballpoint', 'pilot-capless-decimo-matt-elegance-0708']);
+  const targetIds = new Set([
+    'three-o-basic-ink-new-colors-0708',
+    'monteverde-calibra-4in1',
+    'sheaffer-vfm',
+    'sheaffer-vfm-ballpoint',
+    'pilot-capless-decimo-matt-elegance-0708',
+    'penco-prime-timber-mechanical-pencil'
+  ]);
   const defaultLabels = [
     ['제품 핵심 소개형', '대표 특징과 주요 사양을 균형 있게 전달'],
     ['디자인·분위기형', '실제 색감, 소재, 구조적 인상을 중심으로 전달'],
@@ -23,6 +30,13 @@
       ['비교 정리형', '매트·엘레강스의 차이를 빠르게 비교'],
       ['색상 구성형', '색상과 라인 구성을 중심으로 전달'],
       ['업무·실사용형', '사용 장면과 추천 대상을 중심으로 전달']
+    ],
+    'penco-prime-timber-mechanical-pencil': [
+      ['제품 핵심 소개형', '2.0mm 심·나무 바디·전용 샤프너를 균형 있게 전달'],
+      ['색상·옵션형', '기본 6색과 추가금 옵션 4종을 중심으로 전달'],
+      ['특징 정리형', '심 규격과 구성품, 활용 정보를 빠르게 정리'],
+      ['사용·드로잉형', '필기·스케치·도면 메모 활용 장면을 중심으로 전달'],
+      ['짧은 피드형', '핵심 특징과 색상 구성을 간결하게 소개']
     ]
   };
   let timer = null;
